@@ -1,0 +1,13 @@
+import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
+import { CommandRegistryService } from './command-registry.service';
+import { CommandsController } from './commands.controller';
+
+/** Exports the registry so B2's chat handlers can ask whether a command is on. */
+@Module({
+    imports: [AuthModule],
+    controllers: [CommandsController],
+    providers: [CommandRegistryService],
+    exports: [CommandRegistryService],
+})
+export class CommandsModule {}
