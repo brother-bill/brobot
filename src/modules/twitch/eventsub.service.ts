@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ApiClient } from '@twurple/api';
 import { AppTokenAuthProvider } from '@twurple/auth';
 import { EventSubMiddleware } from '@twurple/eventsub-http';
-import type { Express } from 'express';
 import { EnvService } from '../../config/env.service';
 import { BotChatService } from './chat/bot-chat.service';
 import { RedemptionsService } from './redeems/redemptions.service';
@@ -13,6 +13,17 @@ import { RedemptionsService } from './redeems/redemptions.service';
  * the same in both.
  */
 type EventSubRouter = Parameters<EventSubMiddleware['apply']>[0];
+
+/**
+ * The Express app `main.ts` hands over: whatever
+ * `NestExpressApplication.getHttpAdapter().getInstance()` returns. Typed from
+ * Nest, not from `express`, on purpose: platform-express 11 declares its
+ * `Express` against whichever `@types/express` the install hoists, and that is
+ * 5 on a fresh install while this package's own `@types/express` is 4 — the
+ * two are not assignable (5 drops `Request.param`), so an `Express` parameter
+ * typechecked on one install and failed on the next.
+ */
+export type NestExpressInstance = ReturnType<ReturnType<NestExpressApplication['getHttpAdapter']>['getInstance']>;
 
 /** Where Twitch posts EventSub notifications: `https://$DOMAIN/twitch/…` (outside the `/api` prefix, as before). */
 export const EVENTSUB_PATH_PREFIX = '/twitch';
@@ -47,7 +58,7 @@ export class EventSubService {
     }
 
     /** Mounts the webhook routes on `app`. A no-op unless EventSub is enabled. */
-    apply(app: Express): void {
+    apply(app: NestExpressInstance): void {
         if (!this.enabled) {
             this.logger.log('EventSub is off — channel-point redeems and raids are not received');
             return;
