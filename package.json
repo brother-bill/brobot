@@ -13,7 +13,8 @@
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage --passWithNoTests",
         "test:integration": "vitest run --config vitest.config.integration.ts --passWithNoTests",
-        "db:schema:dev": "mikro-orm schema:update --run"
+        "db:schema:dev": "mikro-orm schema:update --run",
+        "import:prisma-dump": "ts-node --transpile-only -P tsconfig.app.json scripts/import-prisma-dump.ts"
     },
     "dependencies": {
         "@mikro-orm/cli": "^6.6.14",

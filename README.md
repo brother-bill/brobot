@@ -11,10 +11,11 @@ MikroORM + Postgres, zod-validated config and brobot's own JWTs, with no
 Prisma, express-session or passport. It lives in the singularity monorepo
 as `apps/brobot` (package `@singularity/brobot`). The migration charter is
 `guidelines/brobot/migration-plan.md` in the superproject. This README
-covers the state after ticket **B1**.
+covers the state after tickets **B1** (the API) and **B3** (the Pokémon
+transfer API and the import of the old database).
 
 The bot itself (chat, EventSub, the `!pokemon` family, votes) arrives with
-B2, and the Pokémon transfer API with B3.
+B2.
 
 ## Layout
 
@@ -32,9 +33,10 @@ src/
     pokemon/                read-only HTTP for the admin site
     commands/               command list + on/off switches
     twitch/                 bot shell: /api/ashketchum socket (B2 fills the module)
-    transfer/               ServiceTokenGuard (B3 adds /api/internal/transfer/*)
+    transfer/               /api/internal/transfer/* for api-time, the active_game state machine,
+                            transfer_log (entities/), and the Prisma-dump import's mappers (import/)
     health/                 /api/health, /api/health/live
-scripts/                    operator scripts (B3: Prisma-dump import)
+scripts/                    operator scripts: import-prisma-dump.ts
 deploy/                     infra templates (I1)
 test/                       shared test helpers, integration global setup
 ```
@@ -182,8 +184,142 @@ starts off, and a channel-point redeem turns it on.
   `WS_SECRET`, sent either as a `token` header (2022 client) or as
   `Authorization: Bearer`. Otherwise the upgrade is refused with 401 before a
   socket exists. No events yet (B2).
-- **`/api/internal/transfer/*`** (B3): `Authorization: Bearer
-  $BROBOT_SERVICE_TOKEN`, checked by `ServiceTokenGuard`.
+- **`/api/internal/transfer/*`**: see the next section.
+
+## Internal transfer API (for api-time)
+
+This is how a Pokémon moves between brobot and pmd-online (migration plan
+§4). **api-time is the only caller.** It proves that the player owns the
+Twitch account, then calls brobot with that Twitch id. brobot checks that
+the row belongs to that Twitch id and flips `active_game`. The shapes are
+mirrored in the superproject at `libs/pmd-contracts/src/transfer.ts`
+(`BrobotPokemonSchema` and the request schemas, ticket A1). Change both
+together.
+
+- **Auth:** `Authorization: Bearer $BROBOT_SERVICE_TOKEN` on every route.
+  Anything else gets 401. These routes are not rate-limited, because every
+  player's request comes from the one api-time host.
+- **Errors** are `{ statusCode, error, code, message }`:
+
+| Status | `code` | When |
+|---|---|---|
+| 400 | (none; `issues` as elsewhere) | malformed id, Twitch id, body |
+| 403 | `pokemon_not_owned` | the row belongs to another Twitch user |
+| 404 | `pokemon_not_found` | no Pokémon with that id |
+| 409 | `pokemon_away` | depart: already in PMD under a **different** register row |
+| 409 | `pokemon_not_away` | return: already in brobot, and the request does not name the register row it came back from |
+| 409 | `register_mismatch` | return: in PMD under a different register row than the one named |
+| 409 | `nonce_reused` | the nonce belongs to an earlier transition of this Pokémon, not its last one |
+
+### `TransferPokemon`
+
+```ts
+{
+  id: string;                 // brobot row uuid: the Pokémon's identity forever (PMD originKey)
+  nameId: string;             // @pkmn species id, e.g. "pikachu"
+  dexNum: number;
+  name: string;               // e.g. "Pikachu"
+  level: number;              // unbounded in brobot
+  shiny: boolean;
+  gender: 'M' | 'F' | 'N';
+  nature: string;
+  ability: string;
+  item: string;               // '' = no item
+  moves: string[];            // @pkmn move ids, verbatim
+  types: string[];
+  wins: number; losses: number; draws: number;
+  activeGame: 'brobot' | 'pmd';
+  pmdRegisterId: string | null;    // kept after return, for the next trip
+  levelAtDeparture: number | null; // brobot level when it last left; null if it never has
+  createdDate: string;        // ISO 8601
+}
+```
+
+### Routes
+
+| Route | Body | 200 response |
+|---|---|---|
+| `GET /api/internal/transfer/users/:twitchId/pokemon` | none | `{ pokemon: TransferPokemon[] }`: every Pokémon of that Twitch user, in either game, oldest first. An unknown Twitch id gets `{ pokemon: [] }`. |
+| `GET /api/internal/transfer/pokemon?twitchId=` | none | the same |
+| `POST /api/internal/transfer/pokemon/:id/depart` | `{ twitchId, pmdRegisterId: uuid, nonce }` | `{ pokemon: TransferPokemon }` |
+| `POST /api/internal/transfer/pokemon/:id/return` | `{ twitchId, pmdLevel: 1..100, nonce, pmdRegisterId?: uuid }` (`level` is accepted in place of `pmdLevel`) | `{ pokemon: TransferPokemon }` |
+
+`twitchId` is a numeric string. `nonce` is 1–128 characters, and api-time
+sends its `Idempotency-Key` uuid.
+
+**depart** (brobot → PMD) moves only a Pokémon whose `activeGame` is
+`brobot`. It sets `activeGame = 'pmd'`, `levelAtDeparture = level`,
+`pmdRegisterId`, and `pmd_first_transferred_at` if that is still null.
+`level` does not change: PMD applies its own cap of 100.
+
+**return** (PMD → brobot) moves only a Pokémon whose `activeGame` is `pmd`.
+It sets `activeGame = 'brobot'` and
+`level = max(level, levelAtDeparture ?? level, pmdLevel)`. **A level never
+goes down.** A level-150 Pokémon that visited PMD as 100 comes back as 150.
+A level-40 Pokémon that PMD raised to 55 comes back as 55. `pmdRegisterId`
+and `levelAtDeparture` are kept.
+
+**Idempotency.** Each transition writes a `transfer_log` row in the same
+transaction as the flip. That row holds the pokemon id, direction, nonce,
+Twitch id, register id, the level before and after, and the time. The
+Pokémon's row is locked for the duration, so concurrent calls run one at a
+time.
+
+- Repeating the nonce of the Pokémon's **last** transition returns the row
+  as it stands and writes nothing.
+- A depart with a new nonce while the Pokémon is already in PMD **under the
+  same `pmdRegisterId`** also answers 200 without writing. The same goes for
+  a return with a new nonce while the Pokémon is already home and the
+  request names the register row it came back from. api-time depends on
+  this: when its own transaction rolls back after brobot has committed, it
+  retries with a new nonce. Any other new nonce is a 409.
+- A request that moves nothing writes no `transfer_log` row. The table is
+  exactly the Pokémon's travel history.
+
+## Importing the old database
+
+`scripts/import-prisma-dump.ts` loads the old Prisma database (the RDS
+`brobot-api-prod`) into the new schema through MikroORM. It covers
+`TwitchUser` (with `roles[]` kept), `TwitchUserRegistered`,
+`TwitchBotAuth`, `TwitchStreamerAuth`, `PokemonTeam`, `Pokemon` (every
+Pokémon arrives with `active_game = 'brobot'`) and both battle-outcome
+tables. `Session` is not imported.
+
+```bash
+# 1. a plain, data-only dump of the old database (the default COPY format; not --inserts, not -Fc)
+pg_dump --data-only --format=plain "$OLD_URL" > brobot-prisma.sql
+
+# 2. map every row; counts per table, every row that cannot be mapped. Connects to nothing.
+pnpm run import:prisma-dump -- brobot-prisma.sql --dry-run
+
+# 3. write it (one transaction; the new schema must already exist)
+DATABASE_URL=postgres://…new… pnpm run import:prisma-dump -- brobot-prisma.sql
+
+# or read the old database directly instead of a dump
+DATABASE_URL_OLD=postgres://…old… DATABASE_URL=postgres://…new… pnpm run import:prisma-dump -- --from-db
+```
+
+- **Idempotent.** Rows are upserted on the old primary keys, so running the
+  same dump twice changes nothing. A Pokémon's transfer columns
+  (`active_game`, `pmd_register_id`, `pmd_first_transferred_at`,
+  `level_at_departure`) are never overwritten. Everything else is taken
+  from the dump, so do not re-import after the new bot has gone live.
+- **Stops at the first row it cannot map** and exits 1, printing the table,
+  the row number, the old id, the column and the reason. Nothing is written.
+  With `--continue`, it skips such rows instead, together with the rows that
+  depend on them (a skipped user's team, tokens and Pokémon), lists every
+  one, and imports the rest.
+- **Refuses** what the new schema or the transfer contract cannot hold: a
+  slot outside 1–6, a level below 1, negative win/loss/draw counts, a gender
+  other than `M`/`F`/`N`, an id that is not a uuid, a NULL array element.
+  NULL `text[]` columns become `{}`, except `roles`, which gets its default
+  `{Viewer}`.
+- **Warns** about two Pokémon in the same team slot. The old bot allowed it,
+  and so does the new schema.
+- After writing, it prints the row count of each new table, to compare
+  against the old database (runbook §6 step 3).
+- Exit codes: `0` done, `1` a row could not be mapped (without
+  `--continue`), `2` bad arguments, an unusable dump, or a database error.
 
 ## Credits
 
