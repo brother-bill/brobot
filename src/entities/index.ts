@@ -1,3 +1,4 @@
+import { CommandSetting } from './command-setting.entity';
 import { Pokemon } from './pokemon.entity';
 import { PokemonBattleOutcome } from './pokemon-battle-outcome.entity';
 import { PokemonTeam } from './pokemon-team.entity';
@@ -7,6 +8,7 @@ import { TwitchStreamerAuth } from './twitch-streamer-auth.entity';
 import { TwitchUser } from './twitch-user.entity';
 import { TwitchUserRegistered } from './twitch-user-registered.entity';
 
+export * from './command-setting.entity';
 export * from './pokemon.entity';
 export * from './pokemon-battle-outcome.entity';
 export * from './pokemon-team.entity';
@@ -30,4 +32,5 @@ export const ENTITIES = [
     Pokemon,
     PokemonBattleOutcome,
     PokemonTeamBattleOutcome,
+    CommandSetting,
 ];
