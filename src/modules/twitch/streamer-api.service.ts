@@ -35,7 +35,12 @@ export class StreamerApiService implements RedemptionSettler, OnApplicationBoots
         const authProvider = await this.tokens.createAuthProvider('streamer');
         if (!authProvider) return;
         this.api = new ApiClient({ authProvider });
-        await this.setRewardsPaused(false);
+        try {
+            await this.setRewardsPaused(false);
+        } catch (error) {
+            // Typically a channel that is not affiliate/partner, or a token without the redemption scopes.
+            this.logger.error(`Could not resume channel-point rewards: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
 
     async fulfill(redemption: Redemption): Promise<void> {

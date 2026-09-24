@@ -41,14 +41,15 @@ export class EventSubService {
         private readonly chat: BotChatService,
     ) {}
 
+    /** Redemptions need the bot (chat to answer in, the streamer client to refund with), so both flags must be on. */
     get enabled(): boolean {
-        return this.env.get('TWITCH_EVENTSUB_ENABLED');
+        return this.env.get('TWITCH_EVENTSUB_ENABLED') && this.env.get('TWITCH_BOT_ENABLED');
     }
 
     /** Mounts the webhook routes on `app`. A no-op unless EventSub is enabled. */
     apply(app: Express): void {
         if (!this.enabled) {
-            this.logger.log('TWITCH_EVENTSUB_ENABLED=false — no EventSub (channel-point redeems and raids are not received)');
+            this.logger.log('EventSub is off — channel-point redeems and raids are not received');
             return;
         }
         const apiClient = new ApiClient({

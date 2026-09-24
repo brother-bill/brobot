@@ -39,13 +39,16 @@ export class PokemonRedeemsService {
             return this.refund(redemption, `@${login}, please enter a slot number between 1 and 6. You have been refunded`);
         }
 
-        const fresh = await this.factory.randomFromDex();
-        if (fresh.moves.length === 0) {
-            this.logger.error(`Pokemon found with no moves: ${fresh.name}`);
-            return this.refund(redemption, `@${login}, your pokemon ${fresh.name} has no moves. You have been refunded`);
-        }
-
+        let fresh;
         try {
+            fresh = await this.factory.randomFromDex();
+            if (fresh.moves.length === 0) {
+                this.logger.error(`Pokemon found with no moves: ${fresh.name}`);
+                return await this.refund(
+                    redemption,
+                    `@${login}, your pokemon ${fresh.name} has no moves. You have been refunded`,
+                );
+            }
             await this.pokemon.createInSlot({ oauthId: redemption.userId, displayName: redemption.displayName }, fresh, slot);
         } catch (error) {
             if (error instanceof PokemonAwayError) {
