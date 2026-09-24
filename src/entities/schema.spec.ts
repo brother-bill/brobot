@@ -26,9 +26,10 @@ describe('entity metadata → DDL', () => {
         return match[1];
     }
 
-    it('creates exactly the eight old tables (no session table), plus B3\'s transfer_log', () => {
+    it('creates the eight old tables (no session table) plus command_setting and transfer_log', () => {
         const tables = [...ddl.matchAll(/create table "([a-z_]+)"/g)].map(match => match[1]).sort();
         expect(tables).toEqual([
+            'command_setting',
             'pokemon',
             'pokemon_battle_outcome',
             'pokemon_team',
@@ -94,6 +95,13 @@ describe('entity metadata → DDL', () => {
                 ),
             );
         }
+    });
+
+    it('keys command switches by catalog name', () => {
+        const columns = table('command_setting');
+        expect(columns).toContain('"name" text not null');
+        expect(columns).toContain('"enabled" boolean not null');
+        expect(columns).toMatch(/primary key \("name"\)/);
     });
 
     it('sets a pokemon team_id NULL when its team is deleted', () => {

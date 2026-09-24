@@ -111,4 +111,17 @@ describe('AppModule boot', () => {
             await expect(connect({ Authorization: `Bearer ${RAW_TEST_ENV.WS_SECRET}` })).resolves.toBe('open');
         });
     });
+
+    it('serves the stream overlay socket at /api/admin-ui without a secret', async () => {
+        const opened = await new Promise<string>(resolve => {
+            const socket = new WebSocket(`ws://${baseUrl}/api/admin-ui`);
+            socket.on('open', () => {
+                socket.close();
+                resolve('open');
+            });
+            socket.on('unexpected-response', (_req, res) => resolve(`http ${res.statusCode}`));
+            socket.on('error', error => resolve(`error ${error.message}`));
+        });
+        expect(opened).toBe('open');
+    });
 });

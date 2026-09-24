@@ -23,6 +23,8 @@ export const RAW_TEST_ENV: Record<string, string> = {
     TWITCH_BOT_USERNAME: 'bro_____bot',
     EVENT_SUB_SECRET: 'eventsub-secret',
     WS_SECRET: 'w'.repeat(24),
+    // No test connects to Twitch; the bot's services are built but never started.
+    TWITCH_BOT_ENABLED: 'false',
 };
 
 export function testEnv(overrides: Record<string, string> = {}): Env {

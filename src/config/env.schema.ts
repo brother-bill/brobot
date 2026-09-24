@@ -37,6 +37,13 @@ const origin = z.string().refine(value => {
 
 const secret = (min: number) => z.string().min(min, `must be at least ${min} characters`);
 
+/** A `true` / `false` environment switch. Anything else is a boot failure, not a guess. */
+const flag = (fallback: 'true' | 'false') =>
+    z
+        .enum(['true', 'false'])
+        .default(fallback)
+        .transform(value => value === 'true');
+
 const optionalString = z
     .string()
     .optional()
@@ -95,10 +102,28 @@ export const envSchema = z
         /** Secret the streamer client presents on /api/ashketchum. */
         WS_SECRET: secret(16),
 
+        // The bot
+        /**
+         * `false` keeps the chat bot, drops and channel-point reward handling
+         * offline: the HTTP API and the sockets still serve. Tests and a local
+         * API-only session set it; production leaves the default.
+         */
+        TWITCH_BOT_ENABLED: flag('true'),
+        /**
+         * `true` mounts Twurple's EventSub webhook middleware on `/twitch/*`
+         * (the old main.ts did this whenever NODE_ENV was production) and
+         * subscribes to channel-point redemptions and raids once the server
+         * listens. Twitch must reach `https://$DOMAIN/twitch/…` on port 443, so
+         * development leaves it off and runs without EventSub.
+         */
+        TWITCH_EVENTSUB_ENABLED: flag('false'),
+
         // Integrations (optional: absent disables the feature)
         RIOT_API_KEY: optionalString,
         LICHESS_AUTH_TOKEN: optionalString,
         OPEN_API_KEY: optionalString,
+        /** Chat model behind the `@bot` reply; only read when OPEN_API_KEY is set. */
+        OPENAI_MODEL: z.string().min(1).default('gpt-4o-mini'),
         STREAMLABS_CLIENT_ID: optionalString,
         STREAMLABS_SECRET: optionalString,
         STREAMLABS_REDIRECT_URI: optionalString,

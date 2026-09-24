@@ -15,7 +15,7 @@ const setEnabledSchema = z.object({
 /**
  * The admin site's commands page. Reading the list is public (it was a public
  * page); switching a command on or off is admin-only, like the old
- * `POST /api/disableQuack`.
+ * `POST /api/disableQuack`, and the switch is stored.
  */
 @Controller('commands')
 export class CommandsController {
@@ -31,7 +31,7 @@ export class CommandsController {
     setEnabled(
         @Body(new ZodValidationPipe(setEnabledSchema)) body: z.infer<typeof setEnabledSchema>,
         @CurrentUser() user: AuthenticatedUser,
-    ): CommandState {
+    ): Promise<CommandState> {
         return this.registry.setEnabled(body.name, body.enabled, `${user.displayName} (${user.oauthId})`);
     }
 }
