@@ -7,6 +7,7 @@ import { TwitchBotAuth } from './twitch-bot-auth.entity';
 import { TwitchStreamerAuth } from './twitch-streamer-auth.entity';
 import { TwitchUser } from './twitch-user.entity';
 import { TwitchUserRegistered } from './twitch-user-registered.entity';
+import { TransferLog } from '../modules/transfer/entities/transfer-log.entity';
 
 export * from './command-setting.entity';
 export * from './pokemon.entity';
@@ -33,4 +34,6 @@ export const ENTITIES = [
     PokemonBattleOutcome,
     PokemonTeamBattleOutcome,
     CommandSetting,
+    // B3's transfer history; the entity lives in its module's lane.
+    TransferLog,
 ];

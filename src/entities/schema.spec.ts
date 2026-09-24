@@ -26,7 +26,7 @@ describe('entity metadata → DDL', () => {
         return match[1];
     }
 
-    it('creates the eight old tables (no session table) plus command_setting', () => {
+    it('creates the eight old tables (no session table) plus command_setting and transfer_log', () => {
         const tables = [...ddl.matchAll(/create table "([a-z_]+)"/g)].map(match => match[1]).sort();
         expect(tables).toEqual([
             'command_setting',
@@ -34,6 +34,7 @@ describe('entity metadata → DDL', () => {
             'pokemon_battle_outcome',
             'pokemon_team',
             'pokemon_team_battle_outcome',
+            'transfer_log',
             'twitch_bot_auth',
             'twitch_streamer_auth',
             'twitch_user',
