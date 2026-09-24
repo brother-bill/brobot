@@ -1,7 +1,6 @@
-import type { Express } from 'express';
 import { fakeChat } from '../../../test/bot-fakes';
 import { testEnvService } from '../../../test/helpers';
-import { EventSubService, EVENTSUB_PATH_PREFIX } from './eventsub.service';
+import { EventSubService, EVENTSUB_PATH_PREFIX, type NestExpressInstance } from './eventsub.service';
 import type { Redemption } from './redeems/redemption';
 import type { RedemptionsService } from './redeems/redemptions.service';
 
@@ -71,7 +70,7 @@ describe('EventSubService', () => {
     });
 
     it('does nothing unless both the bot and EventSub are switched on', async () => {
-        const app = {} as Express;
+        const app = {} as NestExpressInstance;
         const envs: Record<string, string>[] = [{}, { TWITCH_EVENTSUB_ENABLED: 'true' }, { TWITCH_BOT_ENABLED: 'true' }];
         for (const env of envs) {
             const { service } = setup(env);
@@ -83,7 +82,7 @@ describe('EventSubService', () => {
 
     it('mounts the webhook on the app under /twitch, then subscribes to redemptions and raids for the streamer', async () => {
         const { service, said, handled } = setup({ TWITCH_EVENTSUB_ENABLED: 'true', TWITCH_BOT_ENABLED: 'true' });
-        const app = {} as Express;
+        const app = {} as NestExpressInstance;
         service.apply(app);
 
         const middleware = twurple.middleware;
