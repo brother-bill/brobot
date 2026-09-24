@@ -26,13 +26,14 @@ describe('entity metadata → DDL', () => {
         return match[1];
     }
 
-    it('creates exactly the eight old tables (no session table)', () => {
+    it('creates exactly the eight old tables (no session table), plus B3\'s transfer_log', () => {
         const tables = [...ddl.matchAll(/create table "([a-z_]+)"/g)].map(match => match[1]).sort();
         expect(tables).toEqual([
             'pokemon',
             'pokemon_battle_outcome',
             'pokemon_team',
             'pokemon_team_battle_outcome',
+            'transfer_log',
             'twitch_bot_auth',
             'twitch_streamer_auth',
             'twitch_user',
