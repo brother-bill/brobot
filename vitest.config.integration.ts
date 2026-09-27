@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import type { Plugin } from 'vitest/config';
 import swc from 'unplugin-swc';
+import { vitestWorkers } from '../../config/test-workers.mjs';
 
 /**
  * Integration runner (same shape as api-time's): one Postgres container
@@ -18,6 +19,7 @@ export default defineConfig({
         hookTimeout: 60000,
         pool: 'forks',
         fileParallelism: false,
+        maxWorkers: vitestWorkers({ serial: true }),
     },
     plugins: [
         // See api-time's vitest.config.ts for why this cast is needed.

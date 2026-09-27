@@ -1,12 +1,17 @@
 import { defineConfig } from 'vitest/config';
 import type { Plugin } from 'vitest/config';
 import swc from 'unplugin-swc';
+// Sized to the CPUs the cgroup grants, not the cores the host shows; prints
+// one `[vitest.config]` line per run. See the singularity superproject's
+// config/test-workers.mjs.
+import { vitestWorkers } from '../../config/test-workers.mjs';
 
 export default defineConfig({
     test: {
         globals: true,
         root: './',
         environment: 'node',
+        maxWorkers: vitestWorkers(),
         include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
         exclude: ['src/**/*.integration.spec.ts', 'node_modules/**', 'dist/**'],
         coverage: {
