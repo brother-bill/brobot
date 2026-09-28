@@ -69,7 +69,7 @@ const ALWAYS = { process: 'api', nodeEnv: NODE_ENVS } as const;
 
 /** Registers a key's metadata. Each call needs its own schema instance: the registry is keyed by instance. */
 function key<S extends z.ZodType>(meta: EnvKeyMeta, schema: S): S {
-    schema.register(envRegistry, meta);
+    envRegistry.add(schema, meta);
     return schema;
 }
 

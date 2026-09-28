@@ -71,6 +71,11 @@ pnpm run test:integration   # real Postgres via testcontainers (needs Docker)
 authority on what each one must look like. The app refuses to start with a
 missing or malformed required variable, and it reports all of them at once.
 
+Each key also has a config-store kind (`bootstrap`, `secret`, `plain`,
+`topology`), exported to `env.schema.json` by `pnpm run env:schema`. How prod
+and dev config are imported into the store, and how to fetch dev config with
+`pnpm run config:pull-dev`, is in `CLAUDE.md`.
+
 | Required | |
 |---|---|
 | `DATABASE_URL` | `postgres://…` |

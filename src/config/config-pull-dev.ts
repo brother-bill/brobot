@@ -88,7 +88,8 @@ export async function pullDevConfig(io: PullDevIo, paths: PullDevPaths): Promise
         );
         return 2;
     }
-    const base = (io.env[API_URL_ENV]?.trim() || DEFAULT_API_URL).replace(/\/+$/, '');
+    const configured = io.env[API_URL_ENV]?.trim() ?? '';
+    const base = (configured.length > 0 ? configured : DEFAULT_API_URL).replace(/\/+$/, '');
     const url = `${base}/config/bundle?app=brobot&env=dev`;
 
     const response = await io.fetch(url, {
@@ -135,7 +136,9 @@ export async function pullDevConfig(io: PullDevIo, paths: PullDevPaths): Promise
         ].join('\n'),
     );
 
-    io.out(`config:pull-dev: wrote ${paths.envFile} (previous file kept as ${paths.envFile}.prev)`);
+    io.out(
+        `config:pull-dev: wrote ${paths.envFile}${current === null ? '' : ` (previous file kept as ${paths.envFile}.prev)`}`,
+    );
     io.out(`  from the store: ${names.join(', ') || '(nothing)'}`);
     io.out(`  kept from ${bootstrapSource}: ${[...kept.keys()].join(', ') || '(nothing)'}`);
     const unknown = names.filter(name => !(ENV_KEYS as readonly string[]).includes(name));
