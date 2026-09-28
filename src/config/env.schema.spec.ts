@@ -1,4 +1,4 @@
-import { EnvValidationError, parseEnv } from './env.schema';
+import { ENV_KEYS, EnvValidationError, envKeyMeta, envSchema, parseEnv } from './env.schema';
 import { RAW_TEST_ENV } from '../../test/helpers';
 
 function parseWith(overrides: Record<string, string | undefined>) {
@@ -71,5 +71,37 @@ describe('parseEnv', () => {
 
     it('reads RUN_MIGRATIONS=false as false', () => {
         expect(parseWith({ RUN_MIGRATIONS: 'false' }).RUN_MIGRATIONS).toBe(false);
+    });
+});
+
+describe('env key metadata', () => {
+    it('labels every key', () => {
+        for (const name of ENV_KEYS) expect(() => envKeyMeta(name), name).not.toThrow();
+    });
+
+    it('says a key is required exactly when parseEnv requires it', () => {
+        for (const name of ENV_KEYS) {
+            const required = !envSchema.shape[name].safeParse(undefined).success;
+            expect(envKeyMeta(name).requiredBy !== undefined, name).toBe(required);
+        }
+    });
+
+    it('states the default parseEnv applies, as an env file would hold it', () => {
+        for (const name of ENV_KEYS) {
+            const parsed = envSchema.shape[name].safeParse(undefined);
+            const applied = parsed.success && parsed.data !== undefined ? String(parsed.data) : undefined;
+            expect(envKeyMeta(name).default, name).toBe(applied);
+        }
+    });
+
+    it('keeps exactly what the k3s deploy provides out of the config store', () => {
+        // bootstrap keys never reach the bundle; changing this set changes what
+        // the brobot chart must inject itself.
+        expect(ENV_KEYS.filter(name => envKeyMeta(name).kind === 'bootstrap')).toEqual([
+            'NODE_ENV',
+            'PORT',
+            'DATABASE_URL',
+            'RUN_MIGRATIONS',
+        ]);
     });
 });
