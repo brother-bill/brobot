@@ -14,6 +14,8 @@
         "test:coverage": "vitest run --coverage --passWithNoTests",
         "test:integration": "vitest run --config vitest.config.integration.ts --passWithNoTests",
         "db:schema:dev": "mikro-orm schema:update --run",
+        "env:schema": "ts-node --transpile-only -P tsconfig.app.json scripts/export-env-schema.ts",
+        "config:pull-dev": "ts-node --transpile-only -P tsconfig.app.json scripts/config-pull-dev.ts",
         "import:prisma-dump": "ts-node --transpile-only -P tsconfig.app.json scripts/import-prisma-dump.ts"
     },
     "dependencies": {
