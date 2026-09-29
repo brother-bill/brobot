@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { Pokemon, PokemonBattleOutcome, PokemonTeamBattleOutcome, TwitchUser } from '../../entities';
 import type { ActiveGame } from '../../entities';
 
-export const LEADERBOARD_SIZE = 30;
+export const LEADERBOARD_SIZE = 100;
 
 export interface LeaderboardEntry {
     level: number;
@@ -76,14 +76,21 @@ export class PokemonReadService {
         }));
     }
 
+    // `find` with limit 1, not `findOne(…, {})`: MikroORM 6 refuses a findOne
+    // with an empty where ("cannot call EntityManager.findOne() with empty
+    // 'where' parameter"), and the last-battles page 500'd on it (2026-09-29).
     async battleOutcome(): Promise<BattleOutcomeResponse> {
-        return toOutcome(await this.em.fork().findOne(PokemonBattleOutcome, {}, { orderBy: { updated_date: 'desc' } }));
+        const rows = await this.em
+            .fork()
+            .find(PokemonBattleOutcome, {}, { orderBy: { updated_date: 'desc' }, limit: 1 });
+        return toOutcome(rows.at(0) ?? null);
     }
 
     async teamBattleOutcome(): Promise<BattleOutcomeResponse> {
-        return toOutcome(
-            await this.em.fork().findOne(PokemonTeamBattleOutcome, {}, { orderBy: { updated_date: 'desc' } }),
-        );
+        const rows = await this.em
+            .fork()
+            .find(PokemonTeamBattleOutcome, {}, { orderBy: { updated_date: 'desc' }, limit: 1 });
+        return toOutcome(rows.at(0) ?? null);
     }
 
     /** The team of the Twitch user with this id, or null if brobot has never seen them. */
