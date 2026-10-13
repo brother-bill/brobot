@@ -24,6 +24,11 @@ type Row = Record<string, unknown>;
 class TransferFakeEntityManager extends FakeEntityManager {
     private sequence = 0;
 
+    override reset(): void {
+        super.reset();
+        this.sequence = 0;
+    }
+
     async transactional<T>(work: (em: this) => Promise<T>): Promise<T> {
         const result = await work(this);
         await this.flush();
@@ -65,13 +70,38 @@ function matchesRow(row: Row, where: Row): boolean {
 }
 
 describe('/api/internal/transfer (HTTP, database faked)', () => {
+    const em = new TransferFakeEntityManager();
     let app: INestApplication;
-    let em: TransferFakeEntityManager;
     let owner: TwitchUser;
     let pikachu: Pokemon;
 
-    beforeEach(async () => {
-        em = new TransferFakeEntityManager();
+    // One app for the file; the providers are stateless, so emptying the fake
+    // store before each test isolates them.
+    beforeAll(async () => {
+        @Global()
+        @Module({
+            providers: [
+                { provide: EnvService, useValue: testEnvService() },
+                { provide: EntityManager, useValue: em },
+            ],
+            exports: [EnvService, EntityManager],
+        })
+        class TestInfraModule {}
+
+        const moduleRef = await Test.createTestingModule({
+            imports: [TestInfraModule, TransferModule],
+        }).compile();
+        app = moduleRef.createNestApplication({ logger: false });
+        app.setGlobalPrefix('api');
+        await app.init();
+    });
+
+    afterAll(async () => {
+        await app.close();
+    });
+
+    beforeEach(() => {
+        em.reset();
         owner = em.insert(TwitchUser, { oauth_id: OWNER, display_name: 'Owner' });
         em.insert(TwitchUser, { oauth_id: STRANGER, display_name: 'Stranger' });
         pikachu = em.insert(Pokemon, {
@@ -94,27 +124,6 @@ describe('/api/internal/transfer (HTTP, database faked)', () => {
             twitch_user: owner,
             created_date: new Date('2022-12-01T10:00:00Z'),
         });
-
-        @Global()
-        @Module({
-            providers: [
-                { provide: EnvService, useValue: testEnvService() },
-                { provide: EntityManager, useValue: em },
-            ],
-            exports: [EnvService, EntityManager],
-        })
-        class TestInfraModule {}
-
-        const moduleRef = await Test.createTestingModule({
-            imports: [TestInfraModule, TransferModule],
-        }).compile();
-        app = moduleRef.createNestApplication({ logger: false });
-        app.setGlobalPrefix('api');
-        await app.init();
-    });
-
-    afterEach(async () => {
-        await app.close();
     });
 
     const http = () => request(app.getHttpServer());

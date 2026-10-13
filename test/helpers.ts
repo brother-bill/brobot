@@ -53,6 +53,12 @@ export class FakeEntityManager {
         return this;
     }
 
+    /** Empty every table, so one app built in `beforeAll` starts each test clean. */
+    reset(): void {
+        this.rows.clear();
+        this.flushes = 0;
+    }
+
     all<T>(entity: new () => T): T[] {
         return (this.rows.get(entity as EntityCtor) ?? []) as T[];
     }

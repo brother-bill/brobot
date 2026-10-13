@@ -4,8 +4,8 @@ import { buildOrmConfig } from '../mikro-orm.config';
 /**
  * The DDL the entities describe, generated from metadata alone (no database).
  * This pins the column map B3's import is written against (Prisma §0 → snake
- * case) and the constraints the old schema lacked. It is NOT a migration —
- * the owner generates that with `mikro-orm migration:create`.
+ * case), the §4 transfer columns and transfer_log, and the constraints the old
+ * schema lacked. It is not a migration and writes none.
  */
 describe('entity metadata → DDL', () => {
     let ddl: string;
@@ -106,5 +106,31 @@ describe('entity metadata → DDL', () => {
 
     it('sets a pokemon team_id NULL when its team is deleted', () => {
         expect(ddl).toMatch(/"pokemon_team_id_foreign" foreign key \("team_id"\) references "pokemon_team" \("id"\) on update cascade on delete set null/);
+    });
+
+    it('keys transfer_log by a sequence, with every column the ticket names', () => {
+        const columns = table('transfer_log');
+        for (const column of [
+            '"id" bigserial primary key',
+            '"pokemon_id" uuid not null',
+            `"direction" text check ("direction" in ('depart', 'return')) not null`,
+            '"nonce" text not null',
+            '"twitch_id" text not null',
+            '"pmd_register_id" uuid null',
+            '"level_before" int not null',
+            '"level_after" int not null',
+            '"at" timestamptz not null default now()',
+        ]) {
+            expect(columns).toContain(column);
+        }
+    });
+
+    it('makes transfer_log unique on (pokemon, direction, nonce), going with its Pokémon', () => {
+        expect(ddl).toContain(
+            'alter table "transfer_log" add constraint "transfer_log_pokemon_direction_nonce_unique" unique ("pokemon_id", "direction", "nonce");',
+        );
+        expect(ddl).toMatch(
+            /"transfer_log_pokemon_id_foreign" foreign key \("pokemon_id"\) references "pokemon" \("id"\) on update cascade on delete cascade/,
+        );
     });
 });
