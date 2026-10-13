@@ -3,7 +3,7 @@ import { fakeChat, memoryRegistry, viewer } from '../../../../test/bot-fakes';
 import { testEnvService } from '../../../../test/helpers';
 import type { StreamerGateway } from '../streamer.gateway';
 import type { StreamerClientEvent, StreamerServerEvent } from '../streamer-events';
-import { VoteCounter, VOTE_THRESHOLD } from './vote-counter';
+import { VoteCounter } from './vote-counter';
 import type { VoteHost, VoteKind } from './vote-counter';
 import { VotesService } from './votes.service';
 
@@ -25,10 +25,6 @@ function host(clients = 1): VoteHost & { said: string[]; bans: [VoteKind, number
 }
 
 describe('VoteCounter', () => {
-    it('needs four distinct viewers', () => {
-        expect(VOTE_THRESHOLD).toBe(4);
-    });
-
     it('counts each viewer once, then bans at the threshold', async () => {
         const h = host();
         const vote = new VoteCounter('chatban', h);

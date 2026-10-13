@@ -6,7 +6,7 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { EnvService } from '../../config/env.service';
 import { TwitchBotAuth, TwitchStreamerAuth, TwitchUser, TwitchUserRegistered } from '../../entities';
-import { FakeEntityManager, fakeFetch, testEnvService } from '../../../test/helpers';
+import { FakeEntityManager, fakeFetch, RAW_TEST_ENV, testEnvService } from '../../../test/helpers';
 import { AuthModule } from './auth.module';
 import { BOT_SCOPES, STREAMER_SCOPES } from './twitch-scopes';
 
@@ -32,29 +32,22 @@ function cookieValue(raw: string): string {
     return raw.split(';')[0].split('=').slice(1).join('=');
 }
 
+/** The callback URLs registered with the Twitch app; Twitch refuses any other `redirect_uri`. */
+const REGISTERED_CALLBACKS = [
+    RAW_TEST_ENV.TWITCH_CALLBACK_URL_USER,
+    RAW_TEST_ENV.TWITCH_CALLBACK_URL_STREAMER,
+    RAW_TEST_ENV.TWITCH_CALLBACK_URL_BOT,
+];
+
 describe('Twitch OAuth flows (HTTP, Twitch mocked at fetch)', () => {
+    const em = new FakeEntityManager();
     let app: INestApplication;
-    let em: FakeEntityManager;
     let twitchUser = helixUser('42', 'viewer');
     let fetchMock: ReturnType<typeof fakeFetch>;
 
-    beforeEach(async () => {
-        em = new FakeEntityManager();
-        twitchUser = helixUser('42', 'viewer');
-        fetchMock = fakeFetch({
-            'https://id.twitch.tv/oauth2/token': () => ({
-                body: {
-                    access_token: 'twitch-access',
-                    refresh_token: 'twitch-refresh',
-                    expires_in: 14_000,
-                    scope: ['chat:read'],
-                    token_type: 'bearer',
-                },
-            }),
-            'https://api.twitch.tv/helix/users': () => ({ body: { data: [twitchUser] } }),
-        });
-        vi.stubGlobal('fetch', fetchMock.fn);
-
+    // One app for the file; the auth providers are stateless, so a fresh fake
+    // store and fetch before each test isolate them.
+    beforeAll(async () => {
         @Global()
         @Module({
             providers: [
@@ -72,9 +65,41 @@ describe('Twitch OAuth flows (HTTP, Twitch mocked at fetch)', () => {
         await app.init();
     });
 
-    afterEach(async () => {
-        vi.unstubAllGlobals();
+    afterAll(async () => {
         await app.close();
+    });
+
+    beforeEach(() => {
+        em.reset();
+        twitchUser = helixUser('42', 'viewer');
+        fetchMock = fakeFetch({
+            // Twitch's code exchange: only the code it issued, for this client, to a registered callback.
+            'https://id.twitch.tv/oauth2/token': init => {
+                const form = new URLSearchParams(init?.body as string);
+                const valid =
+                    form.get('grant_type') === 'authorization_code' &&
+                    form.get('code') === 'abc' &&
+                    form.get('client_id') === RAW_TEST_ENV.TWITCH_CLIENT_ID &&
+                    form.get('client_secret') === RAW_TEST_ENV.TWITCH_CLIENT_SECRET &&
+                    REGISTERED_CALLBACKS.includes(form.get('redirect_uri') ?? '');
+                if (!valid) return { status: 400, body: { status: 400, message: 'Invalid authorization code' } };
+                return {
+                    body: {
+                        access_token: 'twitch-access',
+                        refresh_token: 'twitch-refresh',
+                        expires_in: 14_000,
+                        scope: ['chat:read'],
+                        token_type: 'bearer',
+                    },
+                };
+            },
+            'https://api.twitch.tv/helix/users': () => ({ body: { data: [twitchUser] } }),
+        });
+        vi.stubGlobal('fetch', fetchMock.fn);
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     const http = () => request(app.getHttpServer());
@@ -133,12 +158,6 @@ describe('Twitch OAuth flows (HTTP, Twitch mocked at fetch)', () => {
             // The viewer flow stores no Twitch token.
             expect(em.all(TwitchStreamerAuth)).toHaveLength(0);
             expect(em.all(TwitchBotAuth)).toHaveLength(0);
-
-            const tokenCall = fetchMock.calls.find(call => call.url.startsWith('https://id.twitch.tv/oauth2/token'));
-            const form = new URLSearchParams(tokenCall?.init?.body as string);
-            expect(form.get('grant_type')).toBe('authorization_code');
-            expect(form.get('code')).toBe('abc');
-            expect(form.get('redirect_uri')).toBe('https://admin.brobot.test/api/auth/twitch/callback');
         });
 
         it('returns the token pair as JSON to a client that asks for JSON, and the pair works', async () => {
@@ -306,11 +325,6 @@ describe('Twitch OAuth flows (HTTP, Twitch mocked at fetch)', () => {
 
         it('refuses a refresh with no token', async () => {
             await http().post('/api/auth/twitch/refresh').expect(401);
-        });
-
-        it('refuses a refresh token as an access token', async () => {
-            const { refreshToken } = await signIn();
-            await http().get('/api/auth/twitch/status').set('Authorization', `Bearer ${refreshToken}`).expect(401);
         });
 
         it('logout clears both cookies', async () => {

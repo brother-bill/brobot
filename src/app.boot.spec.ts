@@ -84,8 +84,8 @@ describe('AppModule boot', () => {
         await http().get('/api/commands').expect(200);
     });
 
-    it('guards the internal transfer surface with the service token (no routes yet → 404 once past CORS)', async () => {
-        await http().get('/api/internal/transfer').expect(404);
+    it('mounts the internal transfer surface behind the service token', async () => {
+        await http().get('/api/internal/transfer/pokemon?twitchId=42').expect(401);
     });
 
     describe('/api/ashketchum', () => {

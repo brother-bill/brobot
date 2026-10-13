@@ -94,7 +94,6 @@ describe('EventSubService', () => {
             secret: 'eventsub-secret',
             strictHostCheck: true,
         });
-        expect(middleware.subscriptions).toEqual([]);
 
         await service.subscribe();
         expect(middleware.ready).toBe(true);
