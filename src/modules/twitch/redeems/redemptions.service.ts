@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { FunCommandsService } from '../fun/fun-commands.service';
+import { HorrorRedeemsService } from './horror-redeems.service';
 import { PokemonRedeemsService } from './pokemon-redeems.service';
 import { REWARD_TITLES } from './redemption';
 import type { Redemption } from './redemption';
@@ -15,6 +16,7 @@ export class RedemptionsService {
     constructor(
         private readonly pokemon: PokemonRedeemsService,
         private readonly fun: FunCommandsService,
+        private readonly horror: HorrorRedeemsService,
     ) {}
 
     async handle(redemption: Redemption): Promise<void> {
@@ -29,8 +31,11 @@ export class RedemptionsService {
                     return await this.pokemon.create(redemption);
                 case REWARD_TITLES.enableQuacks:
                     return await this.fun.enableQuacks(redemption);
-                default:
+                default: {
+                    const effect = HorrorRedeemsService.effectOf(redemption.rewardTitle);
+                    if (effect) return await this.horror.redeem(redemption, effect);
                     return;
+                }
             }
         } catch (error) {
             this.logger.error(`Redemption ${redemption.rewardTitle} failed`, error instanceof Error ? error.stack : error);
