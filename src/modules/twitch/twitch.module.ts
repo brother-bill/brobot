@@ -13,6 +13,7 @@ import { PokemonCommandsService } from './pokemon/pokemon-commands.service';
 import { PokemonDropsService } from './pokemon/pokemon-drops.service';
 import { PokemonRedeemsService } from './redeems/pokemon-redeems.service';
 import { REDEMPTION_SETTLER } from './redeems/redemption';
+import { HorrorRedeemsService } from './redeems/horror-redeems.service';
 import { RedemptionsService } from './redeems/redemptions.service';
 import { StreamerApiService } from './streamer-api.service';
 import { StreamerGateway } from './streamer.gateway';
@@ -48,6 +49,7 @@ import { VotesService } from './votes/votes.service';
         { provide: AiCompleter, useClass: OpenAiCompleter },
         AiReplyService,
         RedemptionsService,
+        HorrorRedeemsService,
         EventSubService,
     ],
     exports: [StreamerGateway, BotChatService, EventSubService],

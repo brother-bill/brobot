@@ -6,6 +6,8 @@ import { FunCommandsService } from '../fun/fun-commands.service';
 import type { OverlayGateway } from '../overlay.gateway';
 import type { OverlayEvent } from '../overlay-events';
 import type { StreamerGateway } from '../streamer.gateway';
+import type { StreamerServerEvent } from '../streamer-events';
+import { HorrorRedeemsService } from './horror-redeems.service';
 import { UiLinks } from '../ui-links';
 import { PokemonRedeemsService } from './pokemon-redeems.service';
 import type { Redemption, RedemptionSettler } from './redemption';
@@ -29,7 +31,7 @@ function redemption(rewardTitle: string, input = ''): Redemption {
     return { id: 'r1', rewardId: 'reward', rewardTitle, userId: 'id-ash', login: 'ash', displayName: 'Ash', input };
 }
 
-function setup(overlayClients = 1) {
+function setup(overlayClients = 1, streamerClients = 1) {
     const { chat, said } = fakeChat();
     const store = new MemoryPokemonStore();
     const settled: string[] = [];
@@ -63,8 +65,17 @@ function setup(overlayClients = 1) {
         { clientCount: 1 } as unknown as StreamerGateway,
         settler,
     );
-    const router = new RedemptionsService(pokemonRedeems, fun);
-    return { said, store, settled, shown, registry, redeem: (r: Redemption) => router.handle(r) };
+    const sent: StreamerServerEvent[] = [];
+    const streamer = {
+        clientCount: streamerClients,
+        broadcast: (event: StreamerServerEvent) => {
+            sent.push(event);
+            return streamerClients;
+        },
+    } as unknown as StreamerGateway;
+    const horror = new HorrorRedeemsService(chat, streamer, settler);
+    const router = new RedemptionsService(pokemonRedeems, fun, horror);
+    return { said, store, settled, shown, sent, registry, redeem: (r: Redemption) => router.handle(r) };
 }
 
 describe('Pokemon Create', () => {
@@ -180,4 +191,43 @@ it('leaves rewards brobot does not handle alone', async () => {
     const ctx = setup();
     await ctx.redeem(redemption('Hydrate'));
     expect([ctx.said, ctx.settled]).toEqual([[], []]);
+});
+
+describe('Horror rewards (SLEEP TIGHT)', () => {
+    it('sends the effect to the streamer client and fulfils the redemption', async () => {
+        const ctx = setup();
+        await ctx.redeem(redemption('Scream At Her'));
+        expect(ctx.sent).toEqual([{ type: 'horror', effect: 'scream', user: 'Ash' }]);
+        expect(ctx.settled).toEqual(['fulfilled r1']);
+    });
+
+    it('matches the titles case-insensitively, for every effect', async () => {
+        const titles: Record<string, string> = {
+            'BOO': 'boo',
+            'flicker the lights': 'lights',
+            'Hijack Her Mic': 'shout',
+            'Freeze Her Controls': 'freeze',
+            'Make Her Jump': 'press',
+            ' Jumpscare ': 'jumpscare',
+        };
+        for (const [title, effect] of Object.entries(titles)) {
+            const ctx = setup();
+            await ctx.redeem(redemption(title));
+            expect(ctx.sent).toEqual([{ type: 'horror', effect, user: 'Ash' }]);
+        }
+    });
+
+    it('refunds when no streamer client is connected', async () => {
+        const ctx = setup(1, 0);
+        await ctx.redeem(redemption('Jumpscare'));
+        expect(ctx.settled).toEqual(['refunded r1']);
+        expect(ctx.said).toEqual(["/me @ash, the streamer's horror game is not connected right now. You have been refunded"]);
+    });
+
+    it('leaves other rewards alone', async () => {
+        const ctx = setup();
+        await ctx.redeem(redemption('Hydrate'));
+        expect(ctx.sent).toEqual([]);
+        expect(ctx.settled).toEqual([]);
+    });
 });
