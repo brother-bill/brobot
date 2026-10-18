@@ -46,7 +46,23 @@ export interface PingEvent {
     sentAt: number;
 }
 
-export type StreamerServerEvent = ChatbanEvent | VoicebanEvent | PingEvent;
+/** What a horror redemption does in the streamer's game (SLEEP TIGHT, friend-slop-1's horror mode). */
+export const HORROR_EFFECTS = ['boo', 'scream', 'lights', 'shout', 'freeze', 'press', 'jumpscare'] as const;
+export type HorrorEffect = (typeof HORROR_EFFECTS)[number];
+
+/**
+ * A viewer redeemed a horror reward: the client forwards it to the game running on the streamer's machine (one JSON
+ * line to 127.0.0.1:47811). `shout` is the "hijack the mic" reward (the game hears a loud mic spike), `freeze` and
+ * `press` take the streamer's controls for a moment, inside the game only.
+ */
+export interface HorrorEvent {
+    type: 'horror';
+    effect: HorrorEffect;
+    /** The redeemer's display name, for the game's on-screen ticker. */
+    user: string;
+}
+
+export type StreamerServerEvent = ChatbanEvent | VoicebanEvent | PingEvent | HorrorEvent;
 
 // ── client → brobot ──────────────────────────────────────────────────────
 
