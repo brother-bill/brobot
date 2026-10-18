@@ -97,10 +97,29 @@ Optional: `NODE_ENV`, `PORT`, `RUN_MIGRATIONS`, and the integration keys
 feature; `!chess` works without a Lichess token, and nothing reads the
 Streamlabs or Riot keys yet).
 
+| Discord (optional) | |
+|---|---|
+| `DISCORD_BOT_URL` | the discord-bot's origin, without `/api` (in-cluster `http://discord-bot.discord.svc.cluster.local`). Unset: going live is not announced. |
+| `DISCORD_INTERNAL_API_TOKEN` | the bot's `INTERNAL_API_TOKEN`, ≥ 32 chars; required with `DISCORD_BOT_URL`, and refused without it |
+| `DISCORD_ANNOUNCE_SERVER` | default `home`: the bot's `servers/<slug>.yaml` the announcement goes to |
+
+When the streamer goes live (EventSub `stream.online`, live broadcasts only,
+so not a rerun or premiere), brobot posts one announcement per broadcast to
+the discord-bot's `POST /api/internal/announce`: `project: brobot`,
+`kind: stream-live`, the stream's title and category (from Helix), Twitch's
+preview image, the channel link and `ping: role`. The bot's server file
+(`announce.projects.brobot`: `kinds.stream-live` and `ping_role`) picks the
+channel and the role; brobot names neither. A 5xx or an unreachable bot is
+retried for about four minutes with the same idempotency key, so it posts
+once; a 4xx (an unrouted kind, a missing role) is logged and not retried. The
+code is `src/modules/twitch/go-live/`. Turning it on (the bot's route, the
+env, the chart allowlist) and what is not built yet: the superproject's
+`guidelines/discord/twitch.md`.
+
 | Bot switches (optional) | |
 |---|---|
 | `TWITCH_BOT_ENABLED` | default `true`. `false` keeps chat, drops and reward handling offline; the API and sockets still serve. |
-| `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids. nginx must pass `/twitch/` to the API. |
+| `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids, and to the stream going live when `DISCORD_BOT_URL` is set. nginx must pass `/twitch/` to the API. |
 | `OPENAI_MODEL` | default `gpt-4o-mini`; the model behind the `@bro_____bot` reply. | The following are retired and no longer read: `SESSION_SECRET` and
 the `AWS_*` deploy variables.
 

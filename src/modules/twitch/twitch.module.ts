@@ -7,6 +7,7 @@ import { EventSubService } from './eventsub.service';
 import { AiCompleter, AiReplyService, OpenAiCompleter } from './fun/ai-reply.service';
 import { ChessService } from './fun/chess.service';
 import { FunCommandsService } from './fun/fun-commands.service';
+import { GoLiveService } from './go-live/go-live.service';
 import { OverlayGateway } from './overlay.gateway';
 import { PokemonBattlesService } from './pokemon/pokemon-battles.service';
 import { PokemonCommandsService } from './pokemon/pokemon-commands.service';
@@ -23,7 +24,8 @@ import { VotesService } from './votes/votes.service';
 /**
  * The bot: Twurple chat and EventSub, the `!pokemon` family, drops,
  * channel-point redeems, `!chatban` / `!voiceban` over `/api/ashketchum`,
- * the stream overlay socket, chess and the AI reply.
+ * the stream overlay socket, chess, the AI reply and the Discord go-live
+ * announcement.
  *
  * Credentials come from AuthModule's token stores, switches from
  * CommandsModule, and the game from PokemonModule. With
@@ -50,6 +52,7 @@ import { VotesService } from './votes/votes.service';
         AiReplyService,
         RedemptionsService,
         HorrorRedeemsService,
+        GoLiveService,
         EventSubService,
     ],
     exports: [StreamerGateway, BotChatService, EventSubService],

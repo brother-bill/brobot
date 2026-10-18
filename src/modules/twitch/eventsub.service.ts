@@ -5,6 +5,7 @@ import { AppTokenAuthProvider } from '@twurple/auth';
 import { EventSubMiddleware } from '@twurple/eventsub-http';
 import { EnvService } from '../../config/env.service';
 import { BotChatService } from './chat/bot-chat.service';
+import { GoLiveService } from './go-live/go-live.service';
 import { RedemptionsService } from './redeems/redemptions.service';
 
 /**
@@ -37,19 +38,23 @@ export const EVENTSUB_PATH_PREFIX = '/twitch';
  * That is the order the old main.ts used.
  *
  * Subscribed: channel-point redemptions (the Pokémon rewards and `Enable
- * Quacks`) and incoming raids (a shout-out). Webhook subscriptions use an app
- * token; Twitch checks the streamer's own grant (`channel:read:redemptions`,
- * from the streamer OAuth flow) when it creates them.
+ * Quacks`), incoming raids (a shout-out) and, when the Discord announcement
+ * is configured ({@link GoLiveService}), the stream going live. Webhook
+ * subscriptions use an app token; Twitch checks the streamer's own grant
+ * (`channel:read:redemptions`, from the streamer OAuth flow) when it creates
+ * the redemption one. `stream.online` needs no grant.
  */
 @Injectable()
 export class EventSubService {
     private readonly logger = new Logger(EventSubService.name);
     private middleware: EventSubMiddleware | null = null;
+    private apiClient: ApiClient | null = null;
 
     constructor(
         private readonly env: EnvService,
         private readonly redemptions: RedemptionsService,
         private readonly chat: BotChatService,
+        private readonly goLive: GoLiveService,
     ) {}
 
     /** Redemptions need the bot (chat to answer in, the streamer client to refund with), so both flags must be on. */
@@ -60,12 +65,13 @@ export class EventSubService {
     /** Mounts the webhook routes on `app`. A no-op unless EventSub is enabled. */
     apply(app: NestExpressInstance): void {
         if (!this.enabled) {
-            this.logger.log('EventSub is off — channel-point redeems and raids are not received');
+            this.logger.log('EventSub is off — channel-point redeems, raids and the stream going live are not received');
             return;
         }
         const apiClient = new ApiClient({
             authProvider: new AppTokenAuthProvider(this.env.get('TWITCH_CLIENT_ID'), this.env.get('TWITCH_CLIENT_SECRET')),
         });
+        this.apiClient = apiClient;
         this.middleware = new EventSubMiddleware({
             apiClient,
             hostName: this.env.get('DOMAIN'),
@@ -108,5 +114,26 @@ export class EventSubService {
             const raider = event.raidingBroadcasterName;
             void this.chat.say(`Check out the MAGNIFICENT ${raider} at twitch.tv/${raider} . So cool!`);
         });
+
+        const apiClient = this.apiClient;
+        if (this.goLive.enabled && apiClient) {
+            middleware.onStreamOnline(streamerId, event => {
+                void this.goLive.streamOnline(
+                    {
+                        streamId: event.id,
+                        type: event.type,
+                        broadcasterId: event.broadcasterId,
+                        login: event.broadcasterName,
+                        displayName: event.broadcasterDisplayName,
+                    },
+                    async () => {
+                        const channel = await apiClient.channels.getChannelInfoById(event.broadcasterId);
+                        return channel && { title: channel.title, gameName: channel.gameName };
+                    },
+                );
+            });
+        } else {
+            this.logger.log('Discord go-live announcement is off (DISCORD_BOT_URL unset)');
+        }
     }
 }
