@@ -404,6 +404,126 @@ describe('/api/internal/transfer (HTTP, database faked)', () => {
             ]);
         });
 
+        // api-time deploys independently of brobot: a body from before species
+        // and moves existed must keep doing exactly what it did.
+        it('regression: a body without species or moves changes nothing but the transfer columns', async () => {
+            const res = await giveBack({
+                twitchId: OWNER,
+                pmdRegisterId: REGISTER,
+                level: 55,
+                nonce: 'n2',
+            }).expect(200);
+            expect(res.body).toEqual({
+                pokemon: {
+                    id: pikachu.id,
+                    nameId: 'pikachu',
+                    dexNum: 25,
+                    name: 'Pikachu',
+                    level: 55,
+                    shiny: true,
+                    gender: 'F',
+                    nature: 'Jolly',
+                    ability: 'Static',
+                    item: '',
+                    moves: ['thunderbolt', 'quickattack'],
+                    types: ['Electric'],
+                    wins: 3,
+                    losses: 1,
+                    draws: 0,
+                    activeGame: 'brobot',
+                    pmdRegisterId: REGISTER,
+                    levelAtDeparture: 40,
+                    createdDate: '2022-12-01T10:00:00.000Z',
+                },
+            });
+            expect(pikachu.color).toBe('Yellow');
+        });
+
+        describe('with what changed while it was away', () => {
+            const evolved = {
+                twitchId: OWNER,
+                pmdRegisterId: REGISTER,
+                level: 55,
+                species: { nameId: 'raichu', name: 'Raichu', dexNum: 26 },
+                moves: ['thunder', 'irontail', 'quickattack'],
+                nonce: 'n2',
+            };
+
+            it('takes a forward evolution and the new moveset', async () => {
+                const res = await giveBack(evolved).expect(200);
+                expect(res.body.pokemon).toMatchObject({
+                    id: pikachu.id,
+                    activeGame: 'brobot',
+                    level: 55,
+                    nameId: 'raichu',
+                    name: 'Raichu',
+                    dexNum: 26,
+                    types: ['Electric'],
+                    moves: ['thunder', 'irontail', 'quickattack'],
+                    shiny: true,
+                    ability: 'Static',
+                });
+                expect(pikachu.color).toBe('Yellow');
+                expect(logs()[1]).toMatchObject({ direction: 'return', nonce: 'n2' });
+            });
+
+            it('recomputes the species columns from @pkmn, not from the body', async () => {
+                const res = await giveBack({
+                    ...evolved,
+                    species: { nameId: 'raichualola', name: 'Raichu', dexNum: 26 },
+                }).expect(200);
+                expect(res.body.pokemon).toMatchObject({
+                    nameId: 'raichualola',
+                    name: 'Raichu-Alola',
+                    types: ['Electric', 'Psychic'],
+                });
+                expect(pikachu.color).toBe('Brown');
+            });
+
+            it('replays the nonce without applying anything twice', async () => {
+                const first = await giveBack(evolved).expect(200);
+                const again = await giveBack(evolved).expect(200);
+                expect(again.body).toEqual(first.body);
+                expect(logs()).toHaveLength(2);
+            });
+
+            it('answers 409 not_forward_evolution and leaves the Pokémon in PMD, untouched', async () => {
+                const res = await giveBack({
+                    ...evolved,
+                    species: { nameId: 'pichu', name: 'Pichu', dexNum: 172 },
+                }).expect(409);
+                expect(res.body).toMatchObject({ statusCode: 409, code: 'not_forward_evolution' });
+                expect(pikachu).toMatchObject({
+                    active_game: 'pmd',
+                    level: 40,
+                    name_id: 'pikachu',
+                    moves: ['thunderbolt', 'quickattack'],
+                });
+                expect(logs()).toHaveLength(1);
+            });
+
+            it('answers 409 unknown_move and leaves the Pokémon in PMD, untouched', async () => {
+                const res = await giveBack({ ...evolved, moves: ['thunder', 'notamove'] }).expect(
+                    409,
+                );
+                expect(res.body).toMatchObject({ statusCode: 409, code: 'unknown_move' });
+                expect(pikachu).toMatchObject({ active_game: 'pmd', name_id: 'pikachu' });
+                expect(logs()).toHaveLength(1);
+            });
+
+            it('validates their shape', async () => {
+                await giveBack({ ...evolved, moves: [] }).expect(400);
+                await giveBack({ ...evolved, moves: ['a', 'b', 'c', 'd', 'e'] }).expect(400);
+                await giveBack({ ...evolved, moves: ['Thunder Bolt'] }).expect(400);
+                await giveBack({ ...evolved, species: { nameId: 'raichu' } }).expect(400);
+                await giveBack({
+                    ...evolved,
+                    species: { nameId: 'Raichu', name: 'Raichu', dexNum: 26 },
+                }).expect(400);
+                expect(pikachu.active_game).toBe('pmd');
+            });
+        });
+
         it('a level-150 Pokémon visits PMD (cap 100) and comes back as 150', async () => {
             await giveBack({ twitchId: OWNER, pmdLevel: 40, nonce: 'n2' }).expect(200);
             pikachu.level = 150;

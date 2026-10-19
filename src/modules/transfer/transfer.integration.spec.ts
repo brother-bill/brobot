@@ -122,6 +122,36 @@ describe('Prisma import + transfer (Postgres)', () => {
         ]);
     });
 
+    it('stores an evolution and a new moveset brought home, once', async () => {
+        await importFixture();
+        const transfer = new TransferService(em);
+        await transfer.depart(PIKACHU, { twitchId: '42', pmdRegisterId: REGISTER, nonce: 'n1' });
+
+        const body = {
+            twitchId: '42',
+            pmdRegisterId: REGISTER,
+            pmdLevel: 100,
+            nonce: 'n2',
+            species: { nameId: 'raichu' },
+            moves: ['thunder', 'irontail'],
+        };
+        const returned = await transfer.return(PIKACHU, body);
+        expect(await transfer.return(PIKACHU, body)).toEqual(returned);
+
+        const row = await em.fork().findOneOrFail(Pokemon, { id: PIKACHU });
+        expect(row).toMatchObject({
+            active_game: 'brobot',
+            level: 150,
+            name: 'Raichu',
+            name_id: 'raichu',
+            dex_num: 26,
+            types: ['Electric'],
+            color: 'Yellow',
+            moves: ['thunder', 'irontail'],
+        });
+        expect(await em.fork().count(TransferLog, { pokemon: PIKACHU })).toBe(2);
+    });
+
     it('serialises concurrent departs of one Pokémon: one moves, the other replays', async () => {
         await importFixture();
         const transfer = new TransferService(em);

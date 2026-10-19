@@ -6,8 +6,13 @@ import type { ActiveGame } from '../../entities/pokemon.entity';
 import { TransferLog } from './entities/transfer-log.entity';
 import type { TransferDirection } from './entities/transfer-log.entity';
 import { decideDepart, decideReturn, TRANSFER_ERROR_CODES } from './transfer-rules';
-import type { TransferDecision, TransferErrorCode, TransitionHistory } from './transfer-rules';
-import type { DepartBody, ReturnBody } from './transfer.schemas';
+import type {
+    ReturnRequest,
+    TransferDecision,
+    TransferErrorCode,
+    TransitionHistory,
+} from './transfer-rules';
+import type { DepartBody } from './transfer.schemas';
 
 /**
  * One brobot Pokémon as the internal transfer API returns it. Field names are
@@ -111,7 +116,8 @@ export class TransferService {
         );
     }
 
-    return(id: string, body: ReturnBody): Promise<TransferPokemon> {
+    /** Takes `ReturnBody`; `species` and `moves` may be left out entirely. */
+    return(id: string, body: ReturnRequest & { twitchId: string }): Promise<TransferPokemon> {
         return this.transition(
             id,
             body.twitchId,
@@ -156,6 +162,7 @@ export class TransferService {
 
             if (decision.kind === 'refuse') throw keyedError(409, decision.code, decision.message);
             if (decision.kind === 'move') {
+                const speciesBefore = pokemon.name_id;
                 em.assign(pokemon, decision.changes);
                 em.create(TransferLog, {
                     pokemon,
@@ -166,8 +173,11 @@ export class TransferService {
                     level_before: decision.levelBefore,
                     level_after: decision.levelAfter,
                 });
+                const { name_id: evolvedInto, moves } = decision.changes;
                 this.logger.log(
-                    `pokemon ${id} ${direction}: now in ${decision.changes.active_game}, level ${decision.levelBefore} → ${decision.levelAfter}`,
+                    `pokemon ${id} ${direction}: now in ${decision.changes.active_game}, level ${decision.levelBefore} → ${decision.levelAfter}` +
+                        (evolvedInto ? `, evolved ${speciesBefore} → ${evolvedInto}` : '') +
+                        (moves ? `, moves ${moves.join(', ')}` : ''),
                 );
             }
             return toTransferPokemon(pokemon);

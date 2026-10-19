@@ -1,4 +1,6 @@
 import type { ActiveGame, Pokemon } from '../../entities/pokemon.entity';
+import { evolutionOnReturn, unknownMoveIds } from './away-changes';
+import type { SpeciesColumns } from './away-changes';
 import type { TransferDirection } from './entities/transfer-log.entity';
 
 /**
@@ -29,14 +31,28 @@ export const TRANSFER_ERROR_CODES = {
     registerMismatch: 'register_mismatch',
     /** 409 — the nonce belongs to an earlier transition, not the Pokémon's last one. */
     nonceReused: 'nonce_reused',
+    /** 409 — return: `species` is not a forward evolution of the row's species. */
+    notForwardEvolution: 'not_forward_evolution',
+    /** 409 — return: a move id in `moves` that `@pkmn` does not know. */
+    unknownMove: 'unknown_move',
 } as const;
 export type TransferErrorCode = (typeof TRANSFER_ERROR_CODES)[keyof typeof TRANSFER_ERROR_CODES];
 
 /** The columns the state machine reads. */
 export type TransferState = Pick<
     Pokemon,
-    'active_game' | 'level' | 'level_at_departure' | 'pmd_register_id' | 'pmd_first_transferred_at'
+    | 'active_game'
+    | 'level'
+    | 'level_at_departure'
+    | 'pmd_register_id'
+    | 'pmd_first_transferred_at'
+    | 'name_id'
 >;
+
+/** The columns a transition may write. */
+export type TransferChanges = Partial<
+    Omit<TransferState, 'name_id'> & SpeciesColumns & Pick<Pokemon, 'moves'>
+> & { active_game: ActiveGame };
 
 /** A `transfer_log` row, as far as the rules care. */
 export interface LoggedTransition {
@@ -55,7 +71,7 @@ export interface TransitionHistory {
 export type TransferDecision =
     | {
           kind: 'move';
-          changes: Partial<TransferState> & { active_game: ActiveGame };
+          changes: TransferChanges;
           levelBefore: number;
           levelAfter: number;
       }
@@ -73,6 +89,10 @@ export interface ReturnRequest {
     pmdRegisterId: string | null;
     pmdLevel: number;
     nonce: string;
+    /** The species it evolved into while away; absent leaves the row's species as it is. */
+    species?: { nameId: string } | null;
+    /** The moveset it came back with; absent leaves the row's moves as they are. */
+    moves?: readonly string[] | null;
 }
 
 /**
@@ -155,6 +175,13 @@ export function levelOnReturn(
  * PMD → brobot. Moves only from `pmd`, and only under the register row it
  * left as (when the caller names one). Already home under that register row
  * is a 200 without a write.
+ *
+ * What changed while it was away comes home with it (owner requirement 5),
+ * each part only when the request carries it: `species` when it is a forward
+ * evolution of the row's own (the same species is no change; anything else
+ * refuses the whole return), `moves` replacing the moveset once every id is a
+ * known move. Only a transition that moves applies them, so a replay or a
+ * Pokémon already home never applies them twice.
  */
 export function decideReturn(
     state: TransferState,
@@ -186,9 +213,33 @@ export function decideReturn(
     }
 
     const level = levelOnReturn(state, request.pmdLevel);
+    const changes: TransferChanges = { active_game: 'brobot', level };
+    if (request.species) {
+        const evolution = evolutionOnReturn(state.name_id, request.species.nameId);
+        if (evolution.kind === 'refuse') {
+            return {
+                kind: 'refuse',
+                code: TRANSFER_ERROR_CODES.notForwardEvolution,
+                message: evolution.message,
+            };
+        }
+        if (evolution.kind === 'evolve') Object.assign(changes, evolution.columns);
+    }
+    if (request.moves) {
+        const unknown = unknownMoveIds(request.moves);
+        if (unknown.length > 0) {
+            return {
+                kind: 'refuse',
+                code: TRANSFER_ERROR_CODES.unknownMove,
+                message: `unknown move ${unknown.join(', ')}`,
+            };
+        }
+        changes.moves = [...request.moves];
+    }
+
     return {
         kind: 'move',
-        changes: { active_game: 'brobot', level },
+        changes,
         levelBefore: state.level,
         levelAfter: level,
     };
