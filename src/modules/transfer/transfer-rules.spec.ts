@@ -8,6 +8,7 @@ const NOW = new Date('2026-09-24T12:00:00Z');
 function home(overrides: Partial<TransferState> = {}): TransferState {
     return {
         active_game: 'brobot',
+        name_id: 'pikachu',
         level: 40,
         level_at_departure: null,
         pmd_register_id: null,
@@ -241,6 +242,96 @@ describe('decideReturn (PMD → brobot)', () => {
                 { sameNonce: null, last: logged(2, 'return', 'n2') },
             ),
         ).toEqual({ kind: 'unchanged', reason: 'already-there' });
+    });
+
+    describe('what changed while it was away (owner requirement 5)', () => {
+        const back = { pmdRegisterId: REGISTER, pmdLevel: 55, nonce: 'n2' };
+
+        it('writes only the transfer columns when the request carries no species or moves', () => {
+            const decision = decideReturn(away(), back, history);
+            expect(decision).toEqual(
+                decideReturn(away(), { ...back, species: null, moves: null }, history),
+            );
+            expect(decision).toMatchObject({ kind: 'move' });
+            if (decision.kind === 'move') {
+                expect(Object.keys(decision.changes).sort()).toEqual(['active_game', 'level']);
+            }
+        });
+
+        it('applies a forward evolution and a new moveset together with the level', () => {
+            expect(
+                decideReturn(
+                    away(),
+                    { ...back, species: { nameId: 'raichu' }, moves: ['thunder', 'irontail'] },
+                    history,
+                ),
+            ).toEqual({
+                kind: 'move',
+                changes: {
+                    active_game: 'brobot',
+                    level: 55,
+                    name: 'Raichu',
+                    name_id: 'raichu',
+                    dex_num: 26,
+                    types: ['Electric'],
+                    color: 'Yellow',
+                    moves: ['thunder', 'irontail'],
+                },
+                levelBefore: 40,
+                levelAfter: 55,
+            });
+        });
+
+        it('leaves the species columns alone when the species sent is the row’s own', () => {
+            const decision = decideReturn(
+                away(),
+                { ...back, species: { nameId: 'pikachu' } },
+                history,
+            );
+            expect(decision).toEqual({
+                kind: 'move',
+                changes: { active_game: 'brobot', level: 55 },
+                levelBefore: 40,
+                levelAfter: 55,
+            });
+        });
+
+        it('refuses anything but a forward evolution (409 not_forward_evolution)', () => {
+            expect(
+                decideReturn(away(), { ...back, species: { nameId: 'pichu' } }, history),
+            ).toMatchObject({ kind: 'refuse', code: TRANSFER_ERROR_CODES.notForwardEvolution });
+        });
+
+        it('refuses a moveset with a move @pkmn does not know (409 unknown_move)', () => {
+            expect(
+                decideReturn(away(), { ...back, moves: ['thunderbolt', 'notamove'] }, history),
+            ).toMatchObject({
+                kind: 'refuse',
+                code: TRANSFER_ERROR_CODES.unknownMove,
+                message: 'unknown move notamove',
+            });
+        });
+
+        it('applies nothing again on a replay, though the row has already evolved', () => {
+            const entry = logged(2, 'return', 'n2');
+            expect(
+                decideReturn(
+                    home({ name_id: 'raichu', level: 55, pmd_register_id: REGISTER }),
+                    { ...back, species: { nameId: 'raichu' }, moves: ['thunder'] },
+                    { sameNonce: entry, last: entry },
+                ),
+            ).toEqual({ kind: 'unchanged', reason: 'replay' });
+        });
+
+        it('applies nothing to a Pokémon already home under the named register row', () => {
+            expect(
+                decideReturn(
+                    home({ name_id: 'raichu', level: 55, pmd_register_id: REGISTER }),
+                    { ...back, nonce: 'n3', species: { nameId: 'raichu' }, moves: ['thunder'] },
+                    { sameNonce: null, last: logged(2, 'return', 'n2') },
+                ),
+            ).toEqual({ kind: 'unchanged', reason: 'already-there' });
+        });
     });
 
     it.each([

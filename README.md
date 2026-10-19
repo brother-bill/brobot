@@ -250,6 +250,8 @@ together.
 | 409 | `pokemon_not_away` | return: already in brobot, and the request does not name the register row it came back from |
 | 409 | `register_mismatch` | return: in PMD under a different register row than the one named |
 | 409 | `nonce_reused` | the nonce belongs to an earlier transition of this Pokémon, not its last one |
+| 409 | `not_forward_evolution` | return: `species` is not a forward evolution of the row's species |
+| 409 | `unknown_move` | return: a `moves` id that `@pkmn` does not know |
 
 ### `TransferPokemon`
 
@@ -282,7 +284,7 @@ together.
 | `GET /api/internal/transfer/users/:twitchId/pokemon` | none | `{ pokemon: TransferPokemon[] }`: every Pokémon of that Twitch user, in either game, oldest first. An unknown Twitch id gets `{ pokemon: [] }`. |
 | `GET /api/internal/transfer/pokemon?twitchId=` | none | the same |
 | `POST /api/internal/transfer/pokemon/:id/depart` | `{ twitchId, pmdRegisterId: uuid, nonce }` | `{ pokemon: TransferPokemon }` |
-| `POST /api/internal/transfer/pokemon/:id/return` | `{ twitchId, pmdLevel: 1..100, nonce, pmdRegisterId?: uuid }` (`level` is accepted in place of `pmdLevel`) | `{ pokemon: TransferPokemon }` |
+| `POST /api/internal/transfer/pokemon/:id/return` | `{ twitchId, pmdLevel: 1..100, nonce, pmdRegisterId?: uuid, species?: { nameId, name, dexNum }, moves?: string[1..4] }` (`level` is accepted in place of `pmdLevel`) | `{ pokemon: TransferPokemon }` |
 
 `twitchId` is a numeric string. `nonce` is 1–128 characters, and api-time
 sends its `Idempotency-Key` uuid.
@@ -298,6 +300,24 @@ It sets `activeGame = 'brobot'` and
 goes down.** A level-150 Pokémon that visited PMD as 100 comes back as 150.
 A level-40 Pokémon that PMD raised to 55 comes back as 55. `pmdRegisterId`
 and `levelAtDeparture` are kept.
+
+What changed while it was away (in PMD, or in Minecraft through PMD, the
+hub) comes home with it. Each part applies only when the body carries it,
+so a body with neither changes nothing else:
+
+- `species`: an evolution. It applies only when `species.nameId` is a forward
+  evolution of the row's species along `@pkmn`'s `prevo` chain (Pichu →
+  Raichu and Eevee → Sylveon pass; Raichu → Pikachu does not).
+  `name_id`, `name`, `dex_num`, `types` and `color` are then recomputed from
+  `@pkmn`'s generation-4 dex, the one rows are created from. The body's `name`
+  and `dexNum` are validated but not used. Sending the row's own species
+  changes nothing. Anything else is a 409 `not_forward_evolution` and nothing
+  moves. Shiny, gender, nature, ability and item are kept.
+- `moves`: the moveset, replaced verbatim once every id is a known `@pkmn`
+  move. Otherwise it is a 409 `unknown_move` and nothing moves.
+
+These apply only on the transition itself. A replay or a Pokémon already home
+applies nothing.
 
 **Idempotency.** Each transition writes a `transfer_log` row in the same
 transaction as the flip. That row holds the pokemon id, direction, nonce,

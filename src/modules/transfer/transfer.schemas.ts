@@ -5,7 +5,8 @@ import { PMD_LEVEL_CAP } from './transfer-rules';
  * Request shapes of `/api/internal/transfer`. The authoritative copy of the
  * contract is `libs/pmd-contracts/src/transfer.ts` in the superproject
  * (ticket A1); these accept everything it sends, plus the ticket-B3 spelling
- * of the return body (`pmdLevel` for `level`, no `pmdRegisterId`).
+ * of the return body (`pmdLevel` for `level`, no `pmdRegisterId`). The
+ * return body's `species` and `moves` mirror `BrobotReturnRequestSchema`'s.
  */
 
 /** Twitch user ids are numeric strings (brobot's `twitch_user.oauth_id`). */
@@ -18,6 +19,12 @@ export const twitchIdSchema = z
 const nonceSchema = z.string().trim().min(1).max(128);
 
 const pmdLevelSchema = z.number().int().min(1).max(PMD_LEVEL_CAP);
+
+/** A `@pkmn` (showdown) id, as pmd-contracts spells species and move ids on this wire. */
+const pkmnIdSchema = z
+    .string()
+    .regex(/^[a-z0-9]+$/, 'must be a @pkmn id')
+    .max(40);
 
 export const pokemonIdParamSchema = z.string().uuid('must be a brobot Pokémon id');
 
@@ -39,6 +46,20 @@ export const returnBodySchema = z
         pmdLevel: pmdLevelSchema.optional(),
         level: pmdLevelSchema.optional(),
         nonce: nonceSchema,
+        /**
+         * The species it evolved into while away. Only `nameId` decides
+         * anything: brobot recomputes the other species columns from
+         * `@pkmn`, so `name` and `dexNum` are validated and then ignored.
+         */
+        species: z
+            .object({
+                nameId: pkmnIdSchema,
+                name: z.string().min(1).max(40),
+                dexNum: z.number().int().min(1).max(1025),
+            })
+            .optional(),
+        /** The moveset it came back with, replacing the row's. */
+        moves: z.array(pkmnIdSchema).min(1).max(4).optional(),
     })
     .refine(body => body.pmdLevel !== undefined || body.level !== undefined, {
         message: 'pmdLevel (or level) is required',
@@ -57,5 +78,7 @@ export const returnBodySchema = z
         pmdRegisterId: body.pmdRegisterId ?? null,
         pmdLevel: (body.pmdLevel ?? body.level) as number,
         nonce: body.nonce,
+        species: body.species ? { nameId: body.species.nameId } : null,
+        moves: body.moves ?? null,
     }));
 export type ReturnBody = z.infer<typeof returnBodySchema>;
