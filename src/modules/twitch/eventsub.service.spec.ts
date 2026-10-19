@@ -1,6 +1,7 @@
 import { fakeChat } from '../../../test/bot-fakes';
 import { testEnvService } from '../../../test/helpers';
 import { EventSubService, EVENTSUB_PATH_PREFIX, type NestExpressInstance } from './eventsub.service';
+import { GoLiveService, type StreamOnline } from './go-live/go-live.service';
 import type { Redemption } from './redeems/redemption';
 import type { RedemptionsService } from './redeems/redemptions.service';
 
@@ -53,6 +54,10 @@ vi.mock('@twurple/eventsub-http', () => ({
         onChannelRaidTo(user: string, handler: Handler) {
             this.record.subscriptions.push({ kind: 'raid', user, handler });
         }
+
+        onStreamOnline(user: string, handler: Handler) {
+            this.record.subscriptions.push({ kind: 'stream-online', user, handler });
+        }
     },
 }));
 
@@ -60,8 +65,11 @@ function setup(env: Record<string, string>) {
     const { chat, said } = fakeChat();
     const handled: Redemption[] = [];
     const redemptions = { handle: async (redemption: Redemption) => void handled.push(redemption) };
-    const service = new EventSubService(testEnvService(env), redemptions as unknown as RedemptionsService, chat);
-    return { service, said, handled };
+    const goLive = new GoLiveService(testEnvService(env));
+    const live: StreamOnline[] = [];
+    goLive.streamOnline = async stream => void live.push(stream);
+    const service = new EventSubService(testEnvService(env), redemptions as unknown as RedemptionsService, chat, goLive);
+    return { service, said, handled, live };
 }
 
 describe('EventSubService', () => {
@@ -97,6 +105,7 @@ describe('EventSubService', () => {
 
         await service.subscribe();
         expect(middleware.ready).toBe(true);
+        // DISCORD_BOT_URL is unset, so the stream going live is not subscribed to.
         expect(middleware.subscriptions.map(sub => [sub.kind, sub.user])).toEqual([
             ['redemption', '1000'],
             ['raid', '1000'],
@@ -118,5 +127,19 @@ describe('EventSubService', () => {
             { id: 'r1', rewardId: 'w1', rewardTitle: 'Pokemon Roar', userId: '77', login: 'ash', displayName: 'Ash', input: '' },
         ]);
         expect(said).toEqual(['Check out the MAGNIFICENT misty at twitch.tv/misty . So cool!']);
+    });
+
+    it('subscribes to the stream going live only when the Discord announcement is configured', async () => {
+        const discord = { DISCORD_BOT_URL: 'http://discord-bot.test', DISCORD_INTERNAL_API_TOKEN: 't'.repeat(40) };
+        const { service, live } = setup({ TWITCH_EVENTSUB_ENABLED: 'true', TWITCH_BOT_ENABLED: 'true', ...discord });
+        service.apply({} as NestExpressInstance);
+        await service.subscribe();
+
+        const middleware = twurple.middleware;
+        if (!middleware) throw new Error('middleware not created');
+        const online = middleware.subscriptions.find(sub => sub.kind === 'stream-online');
+        expect(online?.user).toBe('1000');
+        online?.handler({ id: 's1', type: 'live', broadcasterId: '1000', broadcasterName: 'trama', broadcasterDisplayName: 'Trama' });
+        expect(live).toEqual([{ streamId: 's1', type: 'live', broadcasterId: '1000', login: 'trama', displayName: 'Trama' }]);
     });
 });

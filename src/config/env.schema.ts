@@ -434,8 +434,57 @@ export const envSchema = z
             },
             optionalString(),
         ),
+
+        // Discord (optional: unset, the stream going live is not announced)
+
+        // modules/twitch/go-live/go-live.service.ts
+        /** The discord-bot's in-cluster origin; its announce endpoint posts the go-live message. */
+        DISCORD_BOT_URL: key(
+            {
+                kind: 'topology',
+                description:
+                    'Origin of the discord-bot, without /api (in-cluster: http://discord-bot.discord.svc.cluster.local). With DISCORD_INTERNAL_API_TOKEN, the stream going live is announced on Discord. Unset or blank = no announcement.',
+            },
+            optionalString().pipe(httpUrl().optional()),
+        ),
+        // modules/twitch/go-live/go-live.service.ts
+        DISCORD_INTERNAL_API_TOKEN: key(
+            {
+                kind: 'secret',
+                description:
+                    "Bearer secret brobot presents to the discord-bot's /api/internal/announce: the bot's INTERNAL_API_TOKEN. At least 32 characters. Required when DISCORD_BOT_URL is set.",
+            },
+            optionalString().pipe(secret(32).optional()),
+        ),
+        // modules/twitch/go-live/go-live.service.ts
+        DISCORD_ANNOUNCE_SERVER: key(
+            {
+                kind: 'plain',
+                description:
+                    "The discord-bot server slug (its servers/<slug>.yaml) the go-live announcement goes to; that file's announce.projects.brobot routes it.",
+                default: 'home',
+            },
+            z
+                .string()
+                .regex(/^[a-z][a-z0-9-]*$/, 'must be a server slug like home')
+                .default('home'),
+        ),
     })
     .superRefine((env, ctx) => {
+        if (env.DISCORD_BOT_URL && !env.DISCORD_INTERNAL_API_TOKEN) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['DISCORD_INTERNAL_API_TOKEN'],
+                message: 'is required when DISCORD_BOT_URL is set — the discord-bot refuses an unauthenticated announcement',
+            });
+        }
+        if (env.DISCORD_INTERNAL_API_TOKEN && !env.DISCORD_BOT_URL) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['DISCORD_BOT_URL'],
+                message: 'is required when DISCORD_INTERNAL_API_TOKEN is set — without it nothing is announced',
+            });
+        }
         const uiOrigin = new URL(env.UI_URL).origin;
         if (!env.ALLOWED_ORIGINS.includes(uiOrigin)) {
             ctx.addIssue({
