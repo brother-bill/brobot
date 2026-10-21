@@ -34,7 +34,7 @@ src/
                             transfer_log (entities/), and the Prisma-dump import's mappers (import/)
     health/                 /api/health, /api/health/live
 scripts/                    operator scripts: import-prisma-dump.ts
-deploy/                     infra templates (I1)
+deploy/                     where the deploy lives (it is not here)
 test/                       shared test helpers, integration global setup
 ```
 

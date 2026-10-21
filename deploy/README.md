@@ -1,27 +1,32 @@
-# brobot deploy templates
+# brobot deploy
 
-Empty on purpose. Ticket **I1** of `guidelines/brobot/migration-plan.md` fills
-this directory: the Terraform module (`machines` map, Cloudflare DNS, firewall),
-the compose file (api, postgres, nginx, certbot, autoheal), the nginx server
-blocks, the `deploy-brobot.yml` workflow template, `materialize.sh`, and the
-cutover runbook (plan §6).
+Nothing deploys from this directory. It once waited for ticket **I1** of
+`guidelines/brobot/migration-plan.md` (Terraform, compose, nginx,
+`materialize.sh`); the k3s chart replaced that plan before it shipped.
 
-Everything committed here is secret-free (hostnames only).
-`materialize.sh` copies it into the gitignored `infra/brobot/`, where the
-operator keeps tfvars, certificates and keys.
+Where the deploy lives:
 
-What B1 fixed for I1 to rely on:
+- **Image**: `Dockerfile.brobot.prod` at the superproject root, built by the
+  superproject's `.github/workflows/build-brobot.yml` and pushed as
+  `ghcr.io/brother-bill/brobot-api`.
+- **Chart and Flux objects**: singularity-infra, `k8s/charts/brobot` and
+  `k8s/platform/apps/brobot-release.yaml`. A new non-bootstrap env key must be
+  allowlisted in that chart (see `CLAUDE.md`).
+- **Database**: the CNPG cluster `brobot-db`, from that chart, backed up to R2.
+- The 2023 bot's EC2 host and RDS database were deleted on 2026-10-21
+  (singularity-infra `runbooks/aws-exit.md`).
 
-- The image is `Dockerfile.brobot.prod` at the superproject root.
-- The API listens on `PORT` (default 3000) and runs migrations **at start**
-  (`RUN_MIGRATIONS`, default true). Give the container healthcheck a
-  `start_period` long enough for a migration.
-- Healthcheck target: `GET /api/health/live` (touches no database).
-- `trust proxy` accepts private-range hops only. nginx must put the real
-  client address in `X-Forwarded-For` (behind Cloudflare: `real_ip_header
-  CF-Connecting-IP` with Cloudflare's ranges in `set_real_ip_from`), or every
-  client shares one rate-limit bucket.
-- The streamer socket is `wss://<api host>/api/ashketchum`; nginx needs the
-  usual `Upgrade`/`Connection` headers on that location.
-- Postgres is never published outside the compose network (plan §7: the old
-  RDS answered on 5432 from the internet).
+What B1 fixed for whatever runs the image:
+
+- The API listens on `PORT` (default 3000) and runs migrations at start when
+  `RUN_MIGRATIONS` is true (the default). The chart sets it to false on the
+  long-running pods and migrates in a pre-upgrade Job, or in an init container
+  on first install.
+- Liveness target: `GET /api/health/live` (touches no database).
+- `trust proxy` accepts private-range hops only. The proxy in front must put
+  the real client address in `X-Forwarded-For` (behind Cloudflare, taken from
+  `CF-Connecting-IP`), or every client shares one rate-limit bucket.
+- The streamer socket is `wss://<api host>/api/ashketchum`; the route to it
+  must pass the `Upgrade`/`Connection` headers through.
+- Postgres is never published outside the cluster (plan §7: the old RDS
+  answered on 5432 from the internet).
