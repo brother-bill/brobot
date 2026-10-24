@@ -75,6 +75,8 @@ export class StreamerApiService implements RedemptionSettler, HorrorRewardApi, O
     async update(id: string, change: { isEnabled: boolean; isPaused: boolean }): Promise<void> {
         if (!this.api) return;
         await this.api.channelPoints.updateCustomReward(this.streamerId, id, change);
+        // one line per Helix write, so a rehearsal can prove from the logs that none happened
+        this.logger.log(`Horror reward ${id} ${change.isEnabled ? 'shown' : 'hidden'}${change.isPaused ? ' (paused)' : ''}`);
     }
 
     async fulfill(redemption: Redemption): Promise<void> {
