@@ -15,6 +15,7 @@ import { PokemonDropsService } from './pokemon/pokemon-drops.service';
 import { PokemonRedeemsService } from './redeems/pokemon-redeems.service';
 import { REDEMPTION_SETTLER } from './redeems/redemption';
 import { HorrorRedeemsService } from './redeems/horror-redeems.service';
+import { HORROR_REWARD_API, HorrorRewardsService } from './redeems/horror-rewards.service';
 import { RedemptionsService } from './redeems/redemptions.service';
 import { StreamerApiService } from './streamer-api.service';
 import { StreamerGateway } from './streamer.gateway';
@@ -40,6 +41,8 @@ import { VotesService } from './votes/votes.service';
         BotChatService,
         StreamerApiService,
         { provide: REDEMPTION_SETTLER, useExisting: StreamerApiService },
+        { provide: HORROR_REWARD_API, useExisting: StreamerApiService },
+        HorrorRewardsService,
         UiLinks,
         VotesService,
         PokemonBattlesService,

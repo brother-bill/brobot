@@ -3,7 +3,8 @@ import type { OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/comm
 import { ApiClient } from '@twurple/api';
 import { EnvService } from '../../config/env.service';
 import { TwitchTokenStoreService } from '../auth/twitch-token-store.service';
-import type { Redemption, RedemptionSettler } from './redeems/redemption';
+import type { HorrorRewardApi, ManagedReward } from './redeems/horror-rewards.service';
+import type { HorrorRewardSpec, Redemption, RedemptionSettler } from './redeems/redemption';
 
 /**
  * Helix calls made as the streamer (token from `twitch_streamer_auth`):
@@ -12,10 +13,11 @@ import type { Redemption, RedemptionSettler } from './redeems/redemption';
  * (the old `StreamerApiService` did the same on shutdown and boot).
  */
 @Injectable()
-export class StreamerApiService implements RedemptionSettler, OnApplicationBootstrap, OnApplicationShutdown {
+export class StreamerApiService implements RedemptionSettler, HorrorRewardApi, OnApplicationBootstrap, OnApplicationShutdown {
     private readonly logger = new Logger(StreamerApiService.name);
     private api: ApiClient | null = null;
     private readonly streamerId: string;
+    private readonly readyCallbacks: (() => void)[] = [];
 
     constructor(
         private readonly env: EnvService,
@@ -41,6 +43,38 @@ export class StreamerApiService implements RedemptionSettler, OnApplicationBoots
             // Typically a channel that is not affiliate/partner, or a token without the redemption scopes.
             this.logger.error(`Could not resume channel-point rewards: ${error instanceof Error ? error.message : String(error)}`);
         }
+        for (const callback of this.readyCallbacks.splice(0)) callback();
+    }
+
+    // ── the horror rewards (HorrorRewardsService decides; these are the Helix calls) ──
+
+    onReady(callback: () => void): void {
+        if (this.api) callback();
+        else this.readyCallbacks.push(callback);
+    }
+
+    async listManaged(): Promise<ManagedReward[] | null> {
+        if (!this.api) return null;
+        const rewards = await this.api.channelPoints.getCustomRewards(this.streamerId, true);
+        return rewards.map(reward => ({ id: reward.id, title: reward.title, isEnabled: reward.isEnabled, isPaused: reward.isPaused }));
+    }
+
+    async create(spec: HorrorRewardSpec, isEnabled: boolean): Promise<ManagedReward> {
+        if (!this.api) throw new Error('no streamer API client');
+        const reward = await this.api.channelPoints.createCustomReward(this.streamerId, {
+            title: spec.title,
+            cost: spec.cost,
+            prompt: spec.prompt,
+            isEnabled,
+            backgroundColor: '#5B2A86',
+        });
+        this.logger.log(`Created the horror reward "${spec.title}"`);
+        return { id: reward.id, title: reward.title, isEnabled: reward.isEnabled, isPaused: reward.isPaused };
+    }
+
+    async update(id: string, change: { isEnabled: boolean; isPaused: boolean }): Promise<void> {
+        if (!this.api) return;
+        await this.api.channelPoints.updateCustomReward(this.streamerId, id, change);
     }
 
     async fulfill(redemption: Redemption): Promise<void> {

@@ -47,7 +47,20 @@ export interface PingEvent {
 }
 
 /** What a horror redemption does in the streamer's game (SLEEP TIGHT, friend-slop-1's horror mode). */
-export const HORROR_EFFECTS = ['boo', 'scream', 'lights', 'shout', 'freeze', 'press', 'jumpscare'] as const;
+export const HORROR_EFFECTS = [
+    'boo',
+    'scream',
+    'lights',
+    'shout',
+    'freeze',
+    'press',
+    'jumpscare',
+    // chat plays (the game's !help / !mess / Night Shift's !door left|right): budgeted and capped by the game itself
+    'help',
+    'mess',
+    'door left',
+    'door right',
+] as const;
 export type HorrorEffect = (typeof HORROR_EFFECTS)[number];
 
 /**
@@ -81,7 +94,19 @@ export interface PongEvent {
     sentAt: number;
 }
 
-export type StreamerClientEvent = BanCompleteEvent | PongEvent;
+/**
+ * The horror game on the streamer's machine told the client whether a SLEEP TIGHT run is being played (`live`), and
+ * which dream is on. The client sends it when the game says so, when the game connects or goes away (`live: false`),
+ * and the game repeats it every 30 s while a run is on. brobot shows the horror rewards only while `live` is true.
+ */
+export interface HorrorRunEvent {
+    type: 'horror_run';
+    live: boolean;
+    /** The dream being played ("Night Shift"), empty between dreams or when not live. */
+    dream?: string;
+}
+
+export type StreamerClientEvent = BanCompleteEvent | PongEvent | HorrorRunEvent;
 
 /** Parses one frame from the client; null for anything malformed or unknown. */
 export function parseStreamerClientEvent(frame: string): StreamerClientEvent | null {
@@ -101,6 +126,11 @@ export function parseStreamerClientEvent(frame: string): StreamerClientEvent | n
                 : { type: record.type };
         case 'pong':
             return typeof record.sentAt === 'number' ? { type: 'pong', sentAt: record.sentAt } : null;
+        case 'horror_run':
+            if (typeof record.live !== 'boolean') return null;
+            return typeof record.dream === 'string' && record.dream.length > 0
+                ? { type: 'horror_run', live: record.live, dream: record.dream.slice(0, 64) }
+                : { type: 'horror_run', live: record.live };
         default:
             return null;
     }

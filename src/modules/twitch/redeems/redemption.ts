@@ -26,18 +26,39 @@ export const REWARD_TITLES = {
 } as const;
 
 /**
- * Horror rewards (the streamer's SLEEP TIGHT nights): reward title -> what it does in the game. The titles are matched
- * case-insensitively, so the streamer can create them as she likes them capitalised.
+ * A horror reward brobot creates on the channel (SLEEP TIGHT, friend-slop-1's horror mode). brobot owns these rewards
+ * (Helix only lets an app manage rewards it created), keeps them hidden (`is_enabled: false`), and shows them only while
+ * the streamer's game is connected and a run is being played (`HorrorRewardsService`). `dream` limits a reward to one
+ * dream (the door rewards only exist during Night Shift).
  */
-export const HORROR_REWARDS: Readonly<Record<string, HorrorEffect>> = {
-    'boo': 'boo',
-    'scream at her': 'scream',
-    'flicker the lights': 'lights',
-    'hijack her mic': 'shout',
-    'freeze her controls': 'freeze',
-    'make her jump': 'press',
-    'jumpscare': 'jumpscare',
-};
+export interface HorrorRewardSpec {
+    title: string;
+    effect: HorrorEffect;
+    cost: number;
+    prompt: string;
+    dream?: string;
+}
+
+export const HORROR_REWARD_SPECS: readonly HorrorRewardSpec[] = [
+    { title: 'Boo', effect: 'boo', cost: 100, prompt: 'A soft ghostly boo in the dream.' },
+    { title: 'Scream At Her', effect: 'scream', cost: 300, prompt: 'A scream right behind her.' },
+    { title: 'Flicker The Lights', effect: 'lights', cost: 200, prompt: "The dream's lights stutter." },
+    { title: 'Hijack Her Mic', effect: 'shout', cost: 500, prompt: 'The game hears a loud mic spike: anything that listens comes looking.' },
+    { title: 'Freeze Her Controls', effect: 'freeze', cost: 750, prompt: 'Her controls freeze for 3 seconds.' },
+    { title: 'Make Her Jump', effect: 'press', cost: 300, prompt: 'Presses her main action once.' },
+    { title: 'Jumpscare', effect: 'jumpscare', cost: 1000, prompt: 'A full-screen jump scare.' },
+    { title: 'Help The Sleepers', effect: 'help', cost: 250, prompt: "Help the sleepers in this dream (a lantern, a spare needle, a jar of honey...)." },
+    { title: 'Mess With Them', effect: 'mess', cost: 250, prompt: 'Mess with the sleepers in this dream. Never a kill.' },
+    { title: 'Slam The Left Door', effect: 'door left', cost: 400, prompt: 'Night Shift: slam (or open!) the left door.', dream: 'Night Shift' },
+    { title: 'Slam The Right Door', effect: 'door right', cost: 400, prompt: 'Night Shift: slam (or open!) the right door.', dream: 'Night Shift' },
+];
+
+/**
+ * Horror reward title (lower case) -> what it does in the game. The titles are matched case-insensitively.
+ */
+export const HORROR_REWARDS: Readonly<Record<string, HorrorEffect>> = Object.fromEntries(
+    HORROR_REWARD_SPECS.map(spec => [spec.title.toLowerCase(), spec.effect]),
+);
 
 /** Injection token for whoever settles redemptions (the streamer's Helix client in production). */
 export const REDEMPTION_SETTLER = Symbol('REDEMPTION_SETTLER');

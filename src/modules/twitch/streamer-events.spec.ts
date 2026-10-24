@@ -26,4 +26,10 @@ describe('/api/ashketchum contract', () => {
     it('treats an empty error as no error', () => {
         expect(parseStreamerClientEvent('{"type":"chatban_complete","error":""}')).toEqual({ type: 'chatban_complete' });
     });
+
+    it('parses the horror run frames', () => {
+        expect(parseStreamerClientEvent('{"type":"horror_run","live":true,"dream":"Night Shift"}')).toEqual({ type: 'horror_run', live: true, dream: 'Night Shift' });
+        expect(parseStreamerClientEvent('{"type":"horror_run","live":false,"dream":""}')).toEqual({ type: 'horror_run', live: false });
+        expect(parseStreamerClientEvent('{"type":"horror_run","live":"yes"}')).toBeNull();
+    });
 });
