@@ -75,7 +75,17 @@ export interface HorrorEvent {
     user: string;
 }
 
-export type StreamerServerEvent = ChatbanEvent | VoicebanEvent | PingEvent | HorrorEvent;
+/**
+ * A chat line from the channel, for the horror game (SLEEP TIGHT `rehearsal` and `live` modes only). The client hands it
+ * to the game as `{"type":"chat","user":...,"text":...}`, and the game reads it exactly like a line it read from chat.
+ */
+export interface HorrorChatEvent {
+    type: 'horror_chat';
+    user: string;
+    text: string;
+}
+
+export type StreamerServerEvent = ChatbanEvent | VoicebanEvent | PingEvent | HorrorEvent | HorrorChatEvent;
 
 // ── client → brobot ──────────────────────────────────────────────────────
 
@@ -106,7 +116,19 @@ export interface HorrorRunEvent {
     dream?: string;
 }
 
-export type StreamerClientEvent = BanCompleteEvent | PongEvent | HorrorRunEvent;
+/**
+ * The horror game showed a dream's preview (ready-check) screen. In `live` mode brobot posts that dream's rules line to
+ * chat (rate-limited); in any other mode it posts nothing.
+ */
+export interface HorrorPreviewEvent {
+    type: 'horror_preview';
+    /** The game's dream id ("freddy"). */
+    dream: string;
+    /** The dream's title as the game shows it ("Night Shift"), when sent. */
+    name?: string;
+}
+
+export type StreamerClientEvent = BanCompleteEvent | PongEvent | HorrorRunEvent | HorrorPreviewEvent;
 
 /** Parses one frame from the client; null for anything malformed or unknown. */
 export function parseStreamerClientEvent(frame: string): StreamerClientEvent | null {
@@ -131,6 +153,11 @@ export function parseStreamerClientEvent(frame: string): StreamerClientEvent | n
             return typeof record.dream === 'string' && record.dream.length > 0
                 ? { type: 'horror_run', live: record.live, dream: record.dream.slice(0, 64) }
                 : { type: 'horror_run', live: record.live };
+        case 'horror_preview':
+            if (typeof record.dream !== 'string' || record.dream.length === 0) return null;
+            return typeof record.name === 'string' && record.name.length > 0
+                ? { type: 'horror_preview', dream: record.dream.slice(0, 32), name: record.name.slice(0, 64) }
+                : { type: 'horror_preview', dream: record.dream.slice(0, 32) };
         default:
             return null;
     }

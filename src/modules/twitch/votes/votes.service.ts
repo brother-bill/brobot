@@ -72,7 +72,7 @@ export class VotesService implements OnModuleDestroy {
     }
 
     private async onClientEvent(event: StreamerClientEvent): Promise<void> {
-        if (event.type === 'pong' || event.type === 'horror_run') return;
+        if (event.type !== 'chatban_complete' && event.type !== 'voiceban_complete') return;
         const kind: VoteKind = event.type === 'chatban_complete' ? 'chatban' : 'voiceban';
         this.counter(kind).reset();
         if (event.error) {
