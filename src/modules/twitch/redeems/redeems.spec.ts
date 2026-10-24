@@ -8,6 +8,7 @@ import type { OverlayEvent } from '../overlay-events';
 import type { StreamerGateway } from '../streamer.gateway';
 import type { StreamerServerEvent } from '../streamer-events';
 import { HorrorRedeemsService } from './horror-redeems.service';
+import type { HorrorRewardsService } from './horror-rewards.service';
 import { UiLinks } from '../ui-links';
 import { PokemonRedeemsService } from './pokemon-redeems.service';
 import type { Redemption, RedemptionSettler } from './redemption';
@@ -31,7 +32,7 @@ function redemption(rewardTitle: string, input = ''): Redemption {
     return { id: 'r1', rewardId: 'reward', rewardTitle, userId: 'id-ash', login: 'ash', displayName: 'Ash', input };
 }
 
-function setup(overlayClients = 1, streamerClients = 1) {
+function setup(overlayClients = 1, streamerClients = 1, horrorLive = true) {
     const { chat, said } = fakeChat();
     const store = new MemoryPokemonStore();
     const settled: string[] = [];
@@ -73,7 +74,7 @@ function setup(overlayClients = 1, streamerClients = 1) {
             return streamerClients;
         },
     } as unknown as StreamerGateway;
-    const horror = new HorrorRedeemsService(chat, streamer, settler);
+    const horror = new HorrorRedeemsService(chat, streamer, settler, { isLive: horrorLive } as unknown as HorrorRewardsService);
     const router = new RedemptionsService(pokemonRedeems, fun, horror);
     return { said, store, settled, shown, sent, registry, redeem: (r: Redemption) => router.handle(r) };
 }
@@ -222,6 +223,28 @@ describe('Horror rewards (SLEEP TIGHT)', () => {
         await ctx.redeem(redemption('Jumpscare'));
         expect(ctx.settled).toEqual(['refunded r1']);
         expect(ctx.said).toEqual(["/me @ash, the streamer's horror game is not connected right now. You have been refunded"]);
+    });
+
+    it('refunds when no SLEEP TIGHT run is being played', async () => {
+        const ctx = setup(1, 1, false);
+        await ctx.redeem(redemption('Boo'));
+        expect(ctx.sent).toEqual([]);
+        expect(ctx.settled).toEqual(['refunded r1']);
+        expect(ctx.said).toEqual(["/me @ash, the streamer's horror night is not on right now. You have been refunded"]);
+    });
+
+    it('sends the chat-play rewards as their game events', async () => {
+        const titles: Record<string, string> = {
+            'Help The Sleepers': 'help',
+            'Mess With Them': 'mess',
+            'Slam The Left Door': 'door left',
+            'Slam The Right Door': 'door right',
+        };
+        for (const [title, effect] of Object.entries(titles)) {
+            const ctx = setup();
+            await ctx.redeem(redemption(title));
+            expect(ctx.sent).toEqual([{ type: 'horror', effect, user: 'Ash' }]);
+        }
     });
 
     it('leaves other rewards alone', async () => {

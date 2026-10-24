@@ -2,13 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { BotChatService } from '../chat/bot-chat.service';
 import { StreamerGateway } from '../streamer.gateway';
 import type { HorrorEffect } from '../streamer-events';
+import { HorrorRewardsService } from './horror-rewards.service';
 import { HORROR_REWARDS, REDEMPTION_SETTLER } from './redemption';
 import type { Redemption, RedemptionSettler } from './redemption';
 
 /**
- * Horror rewards: sent to the streamer client, which hands them to the game on her machine. With no client connected
- * the redemption is refunded (nobody would see it); otherwise it is fulfilled. Whether the game itself is running is
- * the client's business (it drops the line if not); the reward copy should say "while the horror game is on".
+ * Horror rewards: sent to the streamer client, which hands them to the game on her machine. The rewards are only
+ * visible while a SLEEP TIGHT run is being played (HorrorRewardsService); a redemption that still arrives with no
+ * client connected, or after the run ended, is refunded (nobody would see it); otherwise it is fulfilled.
  */
 @Injectable()
 export class HorrorRedeemsService {
@@ -16,6 +17,7 @@ export class HorrorRedeemsService {
         private readonly chat: BotChatService,
         private readonly streamer: StreamerGateway,
         @Inject(REDEMPTION_SETTLER) private readonly settler: RedemptionSettler,
+        private readonly rewards: HorrorRewardsService,
     ) {}
 
     /** The effect a reward title stands for, or null when it is not a horror reward. */
@@ -24,6 +26,11 @@ export class HorrorRedeemsService {
     }
 
     async redeem(redemption: Redemption, effect: HorrorEffect): Promise<void> {
+        if (!this.rewards.isLive) {
+            await this.settler.refund(redemption);
+            await this.chat.say(`/me @${redemption.login}, the streamer's horror night is not on right now. You have been refunded`);
+            return;
+        }
         const reached = this.streamer.broadcast({ type: 'horror', effect, user: redemption.displayName });
         if (reached <= 0) {
             await this.settler.refund(redemption);
