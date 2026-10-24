@@ -9,6 +9,8 @@ import type { StreamerGateway } from '../streamer.gateway';
 import type { StreamerServerEvent } from '../streamer-events';
 import { HorrorRedeemsService } from './horror-redeems.service';
 import type { HorrorRewardsService } from './horror-rewards.service';
+import type { HorrorMode } from '../horror/horror-mode.service';
+import { of } from 'rxjs';
 import { UiLinks } from '../ui-links';
 import { PokemonRedeemsService } from './pokemon-redeems.service';
 import type { Redemption, RedemptionSettler } from './redemption';
@@ -32,7 +34,7 @@ function redemption(rewardTitle: string, input = ''): Redemption {
     return { id: 'r1', rewardId: 'reward', rewardTitle, userId: 'id-ash', login: 'ash', displayName: 'Ash', input };
 }
 
-function setup(overlayClients = 1, streamerClients = 1, horrorLive = true) {
+function setup(overlayClients = 1, streamerClients = 1, horrorLive = true, horrorMode: HorrorMode = 'live') {
     const { chat, said } = fakeChat();
     const store = new MemoryPokemonStore();
     const settled: string[] = [];
@@ -74,7 +76,10 @@ function setup(overlayClients = 1, streamerClients = 1, horrorLive = true) {
             return streamerClients;
         },
     } as unknown as StreamerGateway;
-    const horror = new HorrorRedeemsService(chat, streamer, settler, { isLive: horrorLive } as unknown as HorrorRewardsService);
+    const horror = new HorrorRedeemsService(chat, streamer, settler, { isLive: horrorLive } as unknown as HorrorRewardsService, {
+        mode: horrorMode,
+        mode$: of(horrorMode),
+    });
     const router = new RedemptionsService(pokemonRedeems, fun, horror);
     return { said, store, settled, shown, sent, registry, redeem: (r: Redemption) => router.handle(r) };
 }
@@ -232,6 +237,16 @@ describe('Horror rewards (SLEEP TIGHT)', () => {
         expect(ctx.settled).toEqual(['refunded r1']);
         expect(ctx.said).toEqual(["/me @ash, the streamer's horror night is not on right now. You have been refunded"]);
     });
+
+    for (const mode of ['off', 'rehearsal'] as const) {
+        it(`${mode}: refunds a stray redemption without a word in chat`, async () => {
+            const ctx = setup(1, 1, false, mode);
+            await ctx.redeem(redemption('Jumpscare'));
+            expect(ctx.sent).toEqual([]);
+            expect(ctx.settled).toEqual(['refunded r1']);
+            expect(ctx.said).toEqual([]);
+        });
+    }
 
     it('sends the chat-play rewards as their game events', async () => {
         const titles: Record<string, string> = {

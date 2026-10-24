@@ -14,6 +14,9 @@ import { PokemonCommandsService } from './pokemon/pokemon-commands.service';
 import { PokemonDropsService } from './pokemon/pokemon-drops.service';
 import { PokemonRedeemsService } from './redeems/pokemon-redeems.service';
 import { REDEMPTION_SETTLER } from './redeems/redemption';
+import { HORROR_CHAT, HORROR_MODE, HORROR_STREAMER, HorrorChatService } from './horror/horror-chat.service';
+import { HorrorModeController } from './horror/horror-mode.controller';
+import { HorrorModeService } from './horror/horror-mode.service';
 import { HorrorRedeemsService } from './redeems/horror-redeems.service';
 import { HORROR_REWARD_API, HorrorRewardsService } from './redeems/horror-rewards.service';
 import { RedemptionsService } from './redeems/redemptions.service';
@@ -35,7 +38,13 @@ import { VotesService } from './votes/votes.service';
  */
 @Module({
     imports: [AuthModule, CommandsModule, PokemonModule],
+    controllers: [HorrorModeController],
     providers: [
+        HorrorModeService,
+        { provide: HORROR_MODE, useExisting: HorrorModeService },
+        { provide: HORROR_STREAMER, useExisting: StreamerGateway },
+        { provide: HORROR_CHAT, useExisting: BotChatService },
+        HorrorChatService,
         StreamerGateway,
         OverlayGateway,
         BotChatService,

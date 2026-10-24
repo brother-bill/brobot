@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { OnApplicationBootstrap, OnApplicationShutdown, OnModuleDestroy } from '@nestjs/common';
 import type { Subscription } from 'rxjs';
+import { HORROR_MODE } from '../horror/horror-chat.service';
+import type { HorrorModeSource } from '../horror/horror-mode.service';
 import { StreamerGateway } from '../streamer.gateway';
 import { HORROR_REWARD_SPECS } from './redemption';
 import type { HorrorRewardSpec } from './redemption';
@@ -39,6 +41,9 @@ export const HORROR_RUN_STALE_MS = 90_000;
  * - Hidden (`is_enabled: false`): when the run ends, the last streamer client disconnects, the game goes quiet for
  *   {@link HORROR_RUN_STALE_MS}, brobot starts (whatever state it died in) or shuts down.
  *
+ * Gated by the SLEEP TIGHT mode (`horror/horror-mode.service.ts`): only `live` ever creates or shows a reward. In `off`
+ * and `rehearsal` a sync writes nothing at all, except hiding a reward a previous `live` left visible.
+ *
  * Syncs run one at a time; each one reads the rewards and only writes the ones that differ.
  */
 @Injectable()
@@ -54,6 +59,7 @@ export class HorrorRewardsService implements OnApplicationBootstrap, OnApplicati
     constructor(
         private readonly streamer: StreamerGateway,
         @Inject(HORROR_REWARD_API) private readonly api: HorrorRewardApi,
+        @Inject(HORROR_MODE) private readonly gate: HorrorModeSource,
     ) {}
 
     /** The clock (a test replaces it). */
@@ -69,6 +75,10 @@ export class HorrorRewardsService implements OnApplicationBootstrap, OnApplicati
             this.streamer.disconnects$.subscribe(() => {
                 if (this.streamer.clientCount <= 0) void this.setRun(false, '');
             }),
+            this.gate.mode$.subscribe(mode => {
+                this.logger.log(`SLEEP TIGHT mode ${mode}: ${mode === 'live' ? 'rewards follow the run' : 'rewards stay hidden'}`);
+                void this.sync();
+            }),
         );
         // default hidden: whatever the rewards were when brobot last stopped
         this.api.onReady(() => void this.sync());
@@ -76,9 +86,9 @@ export class HorrorRewardsService implements OnApplicationBootstrap, OnApplicati
         this.watchdog.unref();
     }
 
-    /** True while a run is being played (the horror redemptions are refunded otherwise). */
+    /** True while a run is being played in `live` mode (the horror redemptions are refunded otherwise). */
     get isLive(): boolean {
-        return this.live;
+        return this.live && this.gate.mode === 'live';
     }
 
     /** The game's word on the run (through the streamer client). */
@@ -88,7 +98,12 @@ export class HorrorRewardsService implements OnApplicationBootstrap, OnApplicati
         this.live = live;
         this.dream = live ? dream : '';
         if (!changed) return this.chain;
-        this.logger.log(live ? `SLEEP TIGHT run on${dream ? ` (${dream})` : ''}: showing the horror rewards` : 'SLEEP TIGHT run over: hiding the horror rewards');
+        const shown = this.gate.mode === 'live';
+        this.logger.log(
+            live
+                ? `SLEEP TIGHT run on${dream ? ` (${dream})` : ''}: ${shown ? 'showing the horror rewards' : `rewards stay hidden (mode ${this.gate.mode})`}`
+                : 'SLEEP TIGHT run over: hiding the horror rewards',
+        );
         return this.sync();
     }
 
@@ -112,9 +127,12 @@ export class HorrorRewardsService implements OnApplicationBootstrap, OnApplicati
         const rewards = await this.api.listManaged();
         if (!rewards) return;
         const byTitle = new Map(rewards.map(reward => [reward.title.trim().toLowerCase(), reward]));
+        const gateOpen = this.gate.mode === 'live';
         for (const spec of HORROR_REWARD_SPECS) {
-            const want = this.live && (!spec.dream || spec.dream.toLowerCase() === this.dream.toLowerCase());
+            const want = gateOpen && this.live && (!spec.dream || spec.dream.toLowerCase() === this.dream.toLowerCase());
             const reward = byTitle.get(spec.title.toLowerCase());
+            // off / rehearsal: never create, enable or even unpause; only hide what a previous live left visible
+            if (!gateOpen && (!reward || !reward.isEnabled)) continue;
             if (!reward) {
                 // created only when it is about to be shown (a reward this app did not make cannot be managed: the
                 // streamer deletes any hand-made one with the same title first)
