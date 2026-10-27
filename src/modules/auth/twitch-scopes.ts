@@ -19,12 +19,19 @@ export const BOT_SCOPES = [
     'channel:moderate',
 ] as const;
 
-/** Streamer account: markers, predictions, bans, polls, channel points, mods. */
+/**
+ * Streamer account: markers, predictions, commercials, bans, polls, channel
+ * points, mods. `channel:edit:commercial` is new in the rebuild: the old app ran
+ * `play_ad` as the bot through chat's `/commercial`, which Twitch removed; Helix
+ * only starts a commercial with the broadcaster's own token. A streamer token
+ * linked before it was added lacks it until the streamer flow is run again.
+ */
 export const STREAMER_SCOPES = [
     'user_read',
     'chat:read',
     'channel:manage:broadcast',
     'channel:manage:predictions',
+    'channel:edit:commercial',
     'moderator:manage:banned_users',
     'channel:manage:polls',
     'channel:read:redemptions',

@@ -22,7 +22,7 @@ decides what boots, and each key also carries the config store's metadata
 |---|---|---|
 | `bootstrap` | `NODE_ENV`, `PORT`, `DATABASE_URL`, `RUN_MIGRATIONS` | the deploy: the image / chart, `DATABASE_URL` from the CNPG Secret. The store refuses them. |
 | `secret` | `JWT_*`, `BROBOT_SERVICE_TOKEN`, `TWITCH_CLIENT_SECRET`, `EVENT_SUB_SECRET`, `WS_SECRET`, `RIOT_API_KEY`, `LICHESS_AUTH_TOKEN`, `OPEN_API_KEY`, `STREAMLABS_SECRET`, `DISCORD_INTERNAL_API_TOKEN` | prod: 1Password vault `brobot-prod`, as `op://` references. dev: stored in the store. |
-| `plain` | ids, usernames, callback URLs, `UI_URL`, `OPENAI_MODEL`, the `TWITCH_*_ENABLED` switches, Streamlabs client id / redirect URI, `DISCORD_ANNOUNCE_SERVER` | the store, readable |
+| `plain` | ids, usernames, callback URLs, `UI_URL`, `OPENAI_MODEL`, the `TWITCH_*_ENABLED` switches, the `TWITCH_PREDICTION_*` hotkey settings, Streamlabs client id / redirect URI, `DISCORD_ANNOUNCE_SERVER` | the store, readable |
 | `topology` | `DOMAIN`, `ALLOWED_ORIGINS`, `DISCORD_BOT_URL` | the store; the natural per-target override |
 
 The store is api-time's `/admin/config` (its `src/app-modules/config/README.md`

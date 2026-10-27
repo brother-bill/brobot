@@ -69,6 +69,30 @@ describe('parseEnv', () => {
         expect(parseWith({ LICHESS_AUTH_TOKEN: 'lip_x' }).LICHESS_AUTH_TOKEN).toBe('lip_x');
     });
 
+    it('defaults the hotkey prediction, also when a key is blank', () => {
+        for (const env of [parseWith({}), parseWith({ TWITCH_PREDICTION_TITLE: ' ', TWITCH_PREDICTION_OUTCOMES: '', TWITCH_PREDICTION_WINDOW_SECONDS: '' })]) {
+            expect(env.TWITCH_PREDICTION_TITLE).toBe('Will Trama Win This Game?');
+            expect(env.TWITCH_PREDICTION_OUTCOMES).toEqual(['Yes', 'No']);
+            expect(env.TWITCH_PREDICTION_WINDOW_SECONDS).toBe(90);
+        }
+        const custom = parseWith({
+            TWITCH_PREDICTION_TITLE: 'First blood?',
+            TWITCH_PREDICTION_OUTCOMES: 'Us, Them , Nobody',
+            TWITCH_PREDICTION_WINDOW_SECONDS: '120',
+        });
+        expect(custom.TWITCH_PREDICTION_TITLE).toBe('First blood?');
+        expect(custom.TWITCH_PREDICTION_OUTCOMES).toEqual(['Us', 'Them', 'Nobody']);
+        expect(custom.TWITCH_PREDICTION_WINDOW_SECONDS).toBe(120);
+    });
+
+    it("refuses a hotkey prediction Twitch would refuse", () => {
+        expect(issuesOf({ TWITCH_PREDICTION_TITLE: 'x'.repeat(46) }).join('\n')).toMatch(/TWITCH_PREDICTION_TITLE: must be at most 45/);
+        expect(issuesOf({ TWITCH_PREDICTION_OUTCOMES: 'Yes' }).join('\n')).toMatch(/TWITCH_PREDICTION_OUTCOMES: must list at least 2/);
+        expect(issuesOf({ TWITCH_PREDICTION_OUTCOMES: `Yes,${'n'.repeat(26)}` }).join('\n')).toMatch(/at most 25 characters/);
+        expect(issuesOf({ TWITCH_PREDICTION_WINDOW_SECONDS: '10' }).join('\n')).toMatch(/TWITCH_PREDICTION_WINDOW_SECONDS/);
+        expect(issuesOf({ TWITCH_PREDICTION_WINDOW_SECONDS: 'soon' }).join('\n')).toMatch(/TWITCH_PREDICTION_WINDOW_SECONDS/);
+    });
+
     it('reads RUN_MIGRATIONS=false as false', () => {
         expect(parseWith({ RUN_MIGRATIONS: 'false' }).RUN_MIGRATIONS).toBe(false);
     });

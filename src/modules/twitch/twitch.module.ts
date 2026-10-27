@@ -17,6 +17,8 @@ import { REDEMPTION_SETTLER } from './redeems/redemption';
 import { HORROR_CHAT, HORROR_MODE, HORROR_STREAMER, HorrorChatService } from './horror/horror-chat.service';
 import { HorrorModeController } from './horror/horror-mode.controller';
 import { HorrorModeService } from './horror/horror-mode.service';
+import { HOTKEY_HELIX } from './hotkeys/hotkey-helix';
+import { StreamerHotkeysService } from './hotkeys/streamer-hotkeys.service';
 import { HorrorRedeemsService } from './redeems/horror-redeems.service';
 import { HORROR_REWARD_API, HorrorRewardsService } from './redeems/horror-rewards.service';
 import { RedemptionsService } from './redeems/redemptions.service';
@@ -27,7 +29,8 @@ import { VotesService } from './votes/votes.service';
 
 /**
  * The bot: Twurple chat and EventSub, the `!pokemon` family, drops,
- * channel-point redeems, `!chatban` / `!voiceban` over `/api/ashketchum`,
+ * channel-point redeems, `!chatban` / `!voiceban` and the streamer's hotkeys
+ * (marker, prediction, commercial) over `/api/ashketchum`,
  * the stream overlay socket, chess, the AI reply and the Discord go-live
  * announcement.
  *
@@ -52,6 +55,8 @@ import { VotesService } from './votes/votes.service';
         { provide: REDEMPTION_SETTLER, useExisting: StreamerApiService },
         { provide: HORROR_REWARD_API, useExisting: StreamerApiService },
         HorrorRewardsService,
+        { provide: HOTKEY_HELIX, useExisting: StreamerApiService },
+        StreamerHotkeysService,
         UiLinks,
         VotesService,
         PokemonBattlesService,

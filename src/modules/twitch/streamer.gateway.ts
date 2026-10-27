@@ -8,8 +8,8 @@ import type { RawData, WebSocket, WebSocketServer } from 'ws';
 import { EnvService } from '../../config/env.service';
 import { clientAddress } from './client-address';
 import { isAuthorizedStreamerClient } from './streamer-client-auth';
-import { parseStreamerClientEvent, STREAMER_SOCKET_PATH } from './streamer-events';
-import type { StreamerClientEvent, StreamerServerEvent } from './streamer-events';
+import { isHotkeyEvent, parseStreamerClientEvent, STREAMER_SOCKET_PATH } from './streamer-events';
+import type { StreamerClientEvent, StreamerHotkey, StreamerServerEvent } from './streamer-events';
 
 export { STREAMER_SOCKET_PATH } from './streamer-events';
 
@@ -17,10 +17,18 @@ const HEARTBEAT_MS = 15_000;
 
 type TrackedSocket = WebSocket & { isAlive?: boolean };
 
+/** One hotkey press, with the way back to the client that pressed it. */
+export interface HotkeyRequest {
+    hotkey: StreamerHotkey;
+    /** Sends `<hotkey>_complete` to that client (if it is still connected); `error` absent means it worked. */
+    reply(error?: string): void;
+}
+
 /**
  * The streamer client's socket: `!chatban` / `!voiceban` go out, "the ban is
- * over" comes back. The frames are {@link StreamerServerEvent} and
- * {@link StreamerClientEvent} (`streamer-events.ts`, the contract C1 copies).
+ * over" comes back, and the streamer's hotkeys come in and are answered. The
+ * frames are {@link StreamerServerEvent} and {@link StreamerClientEvent}
+ * (`streamer-events.ts`, the contract C1 copies).
  *
  * This class is transport only. The votes subscribe to {@link clientEvents$}
  * and {@link disconnects$}, so the gateway depends on nothing in the bot.
@@ -33,8 +41,10 @@ export class StreamerGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     private server: WebSocketServer | null = null;
     private heartbeat: NodeJS.Timeout | null = null;
 
-    /** Every well-formed frame a streamer client sends. */
+    /** Every well-formed frame a streamer client sends, except the hotkeys. */
     readonly clientEvents$ = new Subject<StreamerClientEvent>();
+    /** The hotkeys (`create_marker`, `create_prediction`, `play_ad`), each answerable to the client that sent it. */
+    readonly hotkeys$ = new Subject<HotkeyRequest>();
     /** Fires whenever a streamer client goes away (the votes reset, as before). */
     readonly disconnects$ = new Subject<void>();
 
@@ -82,6 +92,15 @@ export class StreamerGateway implements OnGatewayInit, OnGatewayConnection, OnGa
                 this.logger.warn('Ignored a malformed or unknown frame from the streamer client');
                 return;
             }
+            if (isHotkeyEvent(event)) {
+                const hotkey = event.type;
+                this.hotkeys$.next({
+                    hotkey,
+                    reply: error =>
+                        void this.send(client, error ? { type: `${hotkey}_complete`, error } : { type: `${hotkey}_complete` }),
+                });
+                return;
+            }
             this.clientEvents$.next(event);
         });
         this.logger.log(`Streamer client connected from ${clientAddress(request)} (${this.clientCount} connected)`);
@@ -108,10 +127,18 @@ export class StreamerGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         return sent;
     }
 
+    /** Sends `event` to one client, if it is still open. */
+    private send(client: WebSocket, event: StreamerServerEvent): boolean {
+        if (client.readyState !== client.OPEN) return false;
+        client.send(JSON.stringify(event));
+        return true;
+    }
+
     onModuleDestroy(): void {
         if (this.heartbeat) clearInterval(this.heartbeat);
         for (const client of this.server?.clients ?? []) client.terminate();
         this.clientEvents$.complete();
+        this.hotkeys$.complete();
         this.disconnects$.complete();
     }
 }
