@@ -110,6 +110,27 @@ describe('AppModule boot', () => {
             await expect(connect({ token: RAW_TEST_ENV.WS_SECRET })).resolves.toBe('open');
             await expect(connect({ Authorization: `Bearer ${RAW_TEST_ENV.WS_SECRET}` })).resolves.toBe('open');
         });
+
+        it('answers a hotkey to the client that pressed it', async () => {
+            // The bot is switched off in tests, so there is no streamer API client: the answer carries why.
+            const answer = await new Promise<unknown>((resolve, reject) => {
+                const socket = new WebSocket(`ws://${baseUrl}/api/ashketchum`, {
+                    headers: { Authorization: `Bearer ${RAW_TEST_ENV.WS_SECRET}` },
+                });
+                socket.on('open', () => socket.send(JSON.stringify({ type: 'create_marker' })));
+                socket.on('message', data => {
+                    const frame = JSON.parse(String(data)) as { type: string };
+                    if (frame.type === 'ping') return;
+                    socket.close();
+                    resolve(frame);
+                });
+                socket.on('error', reject);
+            });
+            expect(answer).toEqual({
+                type: 'create_marker_complete',
+                error: 'the streamer account is not linked, or the bot is switched off',
+            });
+        });
     });
 
     it('serves the stream overlay socket at /api/admin-ui without a secret', async () => {

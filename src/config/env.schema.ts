@@ -108,6 +108,13 @@ const optionalString = () =>
         .optional()
         .transform(value => (value?.trim() ? value.trim() : undefined));
 
+/** A text setting with a fallback: unset or blank (an env file's `KEY=`) is the fallback, never a boot failure. */
+const textOr = (fallback: string) =>
+    z
+        .string()
+        .default(fallback)
+        .transform(value => value.trim() || fallback);
+
 export const envSchema = z
     .object({
         // config/config.module.ts
@@ -371,6 +378,51 @@ export const envSchema = z
                 default: 'false',
             },
             flag('false'),
+        ),
+
+        // modules/twitch/hotkeys/streamer-hotkeys.service.ts: the streamer client's create_prediction hotkey
+        TWITCH_PREDICTION_TITLE: key(
+            {
+                kind: 'plain',
+                description:
+                    "Title of the prediction the streamer client's create_prediction hotkey starts. At most 45 characters (Helix). Unset or blank = the default.",
+                default: 'Will Trama Win This Game?',
+            },
+            textOr('Will Trama Win This Game?').pipe(z.string().max(45, 'must be at most 45 characters (Twitch)')),
+        ),
+        // modules/twitch/hotkeys/streamer-hotkeys.service.ts
+        TWITCH_PREDICTION_OUTCOMES: key(
+            {
+                kind: 'plain',
+                description:
+                    'Comma-separated outcomes of the create_prediction hotkey: 2 to 10, each at most 25 characters (Helix). Unset or blank = the default.',
+                default: 'Yes,No',
+            },
+            textOr('Yes,No')
+                .transform(raw =>
+                    raw
+                        .split(',')
+                        .map(value => value.trim())
+                        .filter(value => value.length > 0),
+                )
+                .pipe(
+                    z
+                        .array(z.string().max(25, 'each outcome must be at most 25 characters (Twitch)'))
+                        .min(2, 'must list at least 2 outcomes')
+                        .max(10, 'must list at most 10 outcomes (Twitch)'),
+                ),
+        ),
+        // modules/twitch/hotkeys/streamer-hotkeys.service.ts
+        TWITCH_PREDICTION_WINDOW_SECONDS: key(
+            {
+                kind: 'plain',
+                description:
+                    'Seconds the create_prediction hotkey keeps the prediction open before Twitch locks it: 30 to 1800 (Helix). Unset or blank = the default.',
+                default: '90',
+            },
+            textOr('90')
+                .transform(Number)
+                .pipe(z.number().int('must be a whole number of seconds').min(30).max(1800)),
         ),
 
         // Integrations (optional: absent disables the feature)

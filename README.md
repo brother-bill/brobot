@@ -120,7 +120,12 @@ env, the chart allowlist) and what is not built yet: the superproject's
 |---|---|
 | `TWITCH_BOT_ENABLED` | default `true`. `false` keeps chat, drops and reward handling offline; the API and sockets still serve. |
 | `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids, and to the stream going live when `DISCORD_BOT_URL` is set. nginx must pass `/twitch/` to the API. |
-| `OPENAI_MODEL` | default `gpt-4o-mini`; the model behind the `@bro_____bot` reply. | The following are retired and no longer read: `SESSION_SECRET` and
+| `OPENAI_MODEL` | default `gpt-4o-mini`; the model behind the `@bro_____bot` reply. |
+| `TWITCH_PREDICTION_TITLE` | default `Will Trama Win This Game?`, ≤ 45 chars: the streamer client's `create_prediction` hotkey. |
+| `TWITCH_PREDICTION_OUTCOMES` | default `Yes,No`: comma-separated, 2–10, each ≤ 25 chars. |
+| `TWITCH_PREDICTION_WINDOW_SECONDS` | default `90` (30–1800): seconds before Twitch locks the prediction. |
+
+The following are retired and no longer read: `SESSION_SECRET` and
 the `AWS_*` deploy variables.
 
 ## Auth model
@@ -221,6 +226,38 @@ ignored in chat, except the votes, which answer `!chatban is turned off`.
   `ping` every 15 s; the client sends `chatban_complete` /
   `voiceban_complete` (optional `error`) when the ban is over, and may answer
   `pong`.
+
+  The streamer's hotkeys, as in the 2022 app: the client sends a bare
+  `{ type }`, brobot makes one Helix call with the streamer's token, then
+  answers **that client only** with `{ type: '<hotkey>_complete', error? }`.
+  No `error` means Twitch did it. Code: `src/modules/twitch/hotkeys/`.
+
+  | Client sends | Helix call (streamer channel) | Scope |
+  |---|---|---|
+  | `create_marker` | create a stream marker, empty description | `channel:manage:broadcast` |
+  | `create_prediction` | create a prediction: `TWITCH_PREDICTION_TITLE` (default "Will Trama Win This Game?"), `TWITCH_PREDICTION_OUTCOMES` (default Yes / No), locked after `TWITCH_PREDICTION_WINDOW_SECONDS` (default 90) | `channel:manage:predictions` |
+  | `play_ad` | start a 30 s commercial | `channel:edit:commercial` |
+
+  Each hotkey runs at most once per 5 s (`HOTKEY_REPEAT_MS`), counted from the
+  press that ran, whether it worked or not. A repeat inside that window makes
+  no call and is answered with `error: 'ignored: <hotkey> already ran less
+  than 5 s ago'`. Each press, its result and every ignored repeat are logged.
+  The `error` lines the client can get:
+
+  | `error` | Why |
+  |---|---|
+  | `not live` | the channel is offline (marker, commercial) |
+  | `a prediction is already running` | Twitch allows one at a time |
+  | `a commercial ran too recently (Twitch's cooldown)` | Helix 429 on the commercial |
+  | `missing scope <scope>: link the streamer account again` | the stored streamer token lacks the scope: run `GET /api/auth/twitch/streamer` again |
+  | `Twitch refused the streamer token: link the streamer account again` | any other 401 |
+  | `the streamer account is not linked, or the bot is switched off` | no streamer API client (no stored token, or `TWITCH_BOT_ENABLED=false`) |
+  | `Twitch said <status>: <message>` | anything else Helix refused, its own message (≤ 160 chars) |
+
+  `channel:edit:commercial` is new on the streamer flow (the 2022 app ran the
+  ad as the bot, through chat's retired `/commercial`). A streamer token
+  linked before it was added answers `play_ad` with the missing-scope line
+  until the streamer flow is completed again.
 - **`/api/admin-ui`** (WebSocket, stream overlay): no secret, receive-only.
   brobot sends `pokemon_roar` and `quack` frames
   (`src/modules/twitch/overlay-events.ts`).

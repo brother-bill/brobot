@@ -3,17 +3,22 @@ import type { OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/comm
 import { ApiClient } from '@twurple/api';
 import { EnvService } from '../../config/env.service';
 import { TwitchTokenStoreService } from '../auth/twitch-token-store.service';
+import type { HotkeyHelix, PredictionSpec } from './hotkeys/hotkey-helix';
+import { StreamerOfflineError } from './hotkeys/hotkey-helix';
 import type { HorrorRewardApi, ManagedReward } from './redeems/horror-rewards.service';
 import type { HorrorRewardSpec, Redemption, RedemptionSettler } from './redeems/redemption';
 
 /**
  * Helix calls made as the streamer (token from `twitch_streamer_auth`):
- * settling channel-point redemptions, and pausing brobot's rewards while the
+ * settling channel-point redemptions, pausing brobot's rewards while the
  * bot is down so viewers cannot spend points on a redeem nobody will handle
- * (the old `StreamerApiService` did the same on shutdown and boot).
+ * (the old `StreamerApiService` did the same on shutdown and boot), and the
+ * streamer client's hotkeys (marker, prediction, commercial).
  */
 @Injectable()
-export class StreamerApiService implements RedemptionSettler, HorrorRewardApi, OnApplicationBootstrap, OnApplicationShutdown {
+export class StreamerApiService
+    implements RedemptionSettler, HorrorRewardApi, HotkeyHelix, OnApplicationBootstrap, OnApplicationShutdown
+{
     private readonly logger = new Logger(StreamerApiService.name);
     private api: ApiClient | null = null;
     private readonly streamerId: string;
@@ -77,6 +82,29 @@ export class StreamerApiService implements RedemptionSettler, HorrorRewardApi, O
         await this.api.channelPoints.updateCustomReward(this.streamerId, id, change);
         // one line per Helix write, so a rehearsal can prove from the logs that none happened
         this.logger.log(`Horror reward ${id} ${change.isEnabled ? 'shown' : 'hidden'}${change.isPaused ? ' (paused)' : ''}`);
+    }
+
+    // ── the streamer client's hotkeys (StreamerHotkeysService decides; these are the Helix calls) ──
+
+    async createStreamMarker(): Promise<void> {
+        await this.hotkeyApi().streams.createStreamMarker(this.streamerId, '');
+    }
+
+    async createPrediction(spec: PredictionSpec): Promise<void> {
+        await this.hotkeyApi().predictions.createPrediction(this.streamerId, {
+            title: spec.title,
+            outcomes: spec.outcomes,
+            autoLockAfter: spec.windowSeconds,
+        });
+    }
+
+    async startCommercial(lengthSeconds: 30): Promise<void> {
+        await this.hotkeyApi().channels.startChannelCommercial(this.streamerId, lengthSeconds);
+    }
+
+    private hotkeyApi(): ApiClient {
+        if (!this.api) throw new StreamerOfflineError();
+        return this.api;
     }
 
     async fulfill(redemption: Redemption): Promise<void> {
