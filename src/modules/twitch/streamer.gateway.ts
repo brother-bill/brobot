@@ -4,9 +4,11 @@ import { WebSocketGateway } from '@nestjs/websockets';
 import type { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit } from '@nestjs/websockets';
 import type { IncomingMessage } from 'node:http';
 import { Subject } from 'rxjs';
+import type { Subscription } from 'rxjs';
 import type { RawData, WebSocket, WebSocketServer } from 'ws';
 import { EnvService } from '../../config/env.service';
 import { clientAddress } from './client-address';
+import { OverlayGateway } from './overlay.gateway';
 import { isAuthorizedStreamerClient } from './streamer-client-auth';
 import { isHotkeyEvent, parseStreamerClientEvent, STREAMER_SOCKET_PATH } from './streamer-events';
 import type { StreamerClientEvent, StreamerHotkey, StreamerServerEvent } from './streamer-events';
@@ -31,7 +33,9 @@ export interface HotkeyRequest {
  * (`streamer-events.ts`, the contract C1 copies).
  *
  * This class is transport only. The votes subscribe to {@link clientEvents$}
- * and {@link disconnects$}, so the gateway depends on nothing in the bot.
+ * and {@link disconnects$}, so the gateway depends on nothing in the bot. It
+ * does relay the overlay socket's count (`overlay_status`): a streamer client
+ * connected here says nothing about whether roars and quacks reach the stream.
  *
  * The path is absolute: WebSocket gateways do not get the `/api` prefix.
  */
@@ -48,7 +52,16 @@ export class StreamerGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     /** Fires whenever a streamer client goes away (the votes reset, as before). */
     readonly disconnects$ = new Subject<void>();
 
-    constructor(private readonly env: EnvService) {}
+    private readonly overlayStatus: Subscription;
+
+    constructor(
+        private readonly env: EnvService,
+        private readonly overlay: OverlayGateway,
+    ) {
+        this.overlayStatus = overlay.connections$.subscribe(connected =>
+            this.broadcast({ type: 'overlay_status', connected }),
+        );
+    }
 
     afterInit(server: WebSocketServer): void {
         this.server = server;
@@ -104,6 +117,7 @@ export class StreamerGateway implements OnGatewayInit, OnGatewayConnection, OnGa
             this.clientEvents$.next(event);
         });
         this.logger.log(`Streamer client connected from ${clientAddress(request)} (${this.clientCount} connected)`);
+        this.send(client, { type: 'overlay_status', connected: this.overlay.clientCount });
     }
 
     handleDisconnect(): void {
@@ -136,6 +150,7 @@ export class StreamerGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     onModuleDestroy(): void {
         if (this.heartbeat) clearInterval(this.heartbeat);
+        this.overlayStatus.unsubscribe();
         for (const client of this.server?.clients ?? []) client.terminate();
         this.clientEvents$.complete();
         this.hotkeys$.complete();

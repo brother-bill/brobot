@@ -3,6 +3,7 @@ import type { OnModuleDestroy } from '@nestjs/common';
 import { WebSocketGateway } from '@nestjs/websockets';
 import type { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit } from '@nestjs/websockets';
 import type { IncomingMessage } from 'node:http';
+import { Subject } from 'rxjs';
 import type { WebSocket, WebSocketServer } from 'ws';
 import { clientAddress } from './client-address';
 import { OVERLAY_SOCKET_PATH } from './overlay-events';
@@ -22,6 +23,9 @@ export class OverlayGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     private readonly logger = new Logger(OverlayGateway.name);
     private server: WebSocketServer | null = null;
     private heartbeat: NodeJS.Timeout | null = null;
+
+    /** The overlay count after every connect and disconnect; the streamer socket relays it as `overlay_status`. */
+    readonly connections$ = new Subject<number>();
 
     afterInit(server: WebSocketServer): void {
         this.server = server;
@@ -44,10 +48,12 @@ export class OverlayGateway implements OnGatewayInit, OnGatewayConnection, OnGat
             client.isAlive = true;
         });
         this.logger.log(`Overlay connected from ${clientAddress(request)} (${this.clientCount} connected)`);
+        this.connections$.next(this.clientCount);
     }
 
     handleDisconnect(): void {
         this.logger.log(`Overlay disconnected (${this.clientCount} connected)`);
+        this.connections$.next(this.clientCount);
     }
 
     get clientCount(): number {
@@ -69,5 +75,6 @@ export class OverlayGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     onModuleDestroy(): void {
         if (this.heartbeat) clearInterval(this.heartbeat);
         for (const client of this.server?.clients ?? []) client.terminate();
+        this.connections$.complete();
     }
 }

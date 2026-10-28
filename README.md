@@ -227,6 +227,13 @@ ignored in chat, except the votes, which answer `!chatban is turned off`.
   `voiceban_complete` (optional `error`) when the ban is over, and may answer
   `pong`.
 
+  brobot also sends `{ type: 'overlay_status', connected }`, the number of
+  stream overlays on `/api/admin-ui`: to each client as it connects, and to
+  every client whenever an overlay connects or goes away. A client connected
+  here says nothing about the overlay: roars and quacks go to that other
+  socket, and with no overlay every Pokemon Roar is refunded ("Streamer not
+  connected to browser source").
+
   The streamer's hotkeys, as in the 2022 app: the client sends a bare
   `{ type }`, brobot makes one Helix call with the streamer's token, then
   answers **that client only** with `{ type: '<hotkey>_complete', error? }`.
@@ -260,7 +267,8 @@ ignored in chat, except the votes, which answer `!chatban is turned off`.
   until the streamer flow is completed again.
 - **`/api/admin-ui`** (WebSocket, stream overlay): no secret, receive-only.
   brobot sends `pokemon_roar` and `quack` frames
-  (`src/modules/twitch/overlay-events.ts`).
+  (`src/modules/twitch/overlay-events.ts`). Its connection count is relayed
+  to the streamer client as `overlay_status` (above).
 - **`/api/internal/transfer/*`**: see the next section.
 
 ## Internal transfer API (for api-time)
