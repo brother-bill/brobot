@@ -120,7 +120,7 @@ describe('AppModule boot', () => {
                 socket.on('open', () => socket.send(JSON.stringify({ type: 'create_marker' })));
                 socket.on('message', data => {
                     const frame = JSON.parse(String(data)) as { type: string };
-                    if (frame.type === 'ping') return;
+                    if (frame.type === 'ping' || frame.type === 'overlay_status') return;
                     socket.close();
                     resolve(frame);
                 });

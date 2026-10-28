@@ -105,13 +105,24 @@ export interface HotkeyCompleteEvent {
     error?: string;
 }
 
+/**
+ * How many stream overlays are connected: the browser source on `/api/admin-ui`, where Pokémon roars and quacks play.
+ * Sent when this client connects and whenever an overlay connects or goes away. This socket being up says nothing
+ * about that one: with `connected: 0`, brobot refunds every roar ("Streamer not connected to browser source").
+ */
+export interface OverlayStatusEvent {
+    type: 'overlay_status';
+    connected: number;
+}
+
 export type StreamerServerEvent =
     | ChatbanEvent
     | VoicebanEvent
     | PingEvent
     | HorrorEvent
     | HorrorChatEvent
-    | HotkeyCompleteEvent;
+    | HotkeyCompleteEvent
+    | OverlayStatusEvent;
 
 // ── client → brobot ──────────────────────────────────────────────────────
 
