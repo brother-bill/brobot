@@ -230,9 +230,9 @@ ignored in chat, except the votes, which answer `!chatban is turned off`.
   brobot also sends `{ type: 'overlay_status', connected }`, the number of
   stream overlays on `/api/admin-ui`: to each client as it connects, and to
   every client whenever an overlay connects or goes away. A client connected
-  here says nothing about the overlay: roars and quacks go to that other
-  socket, and with no overlay every Pokemon Roar is refunded ("Streamer not
-  connected to browser source").
+  here says nothing about the overlay: roars, DEBS alerts and quacks go to
+  that other socket, and with no overlay every Pokemon Roar and DEBS Alert is
+  refunded ("streamer not connected to browser source").
 
   The streamer's hotkeys, as in the 2022 app: the client sends a bare
   `{ type }`, brobot makes one Helix call with the streamer's token, then
@@ -266,9 +266,14 @@ ignored in chat, except the votes, which answer `!chatban is turned off`.
   linked before it was added answers `play_ad` with the missing-scope line
   until the streamer flow is completed again.
 - **`/api/admin-ui`** (WebSocket, stream overlay): no secret, receive-only.
-  brobot sends `pokemon_roar` and `quack` frames
-  (`src/modules/twitch/overlay-events.ts`). Its connection count is relayed
-  to the streamer client as `overlay_status` (above).
+  brobot sends `pokemon_roar`, `debs_alert` and `quack` frames
+  (`src/modules/twitch/overlay-events.ts`). `debs_alert` is
+  `{ login, displayName, message }`, with `message` already censored
+  (`@2toad/profanity`), trimmed, on one line and at most 500 characters. The
+  2022 overlay answered `debs_alert_complete` to refund past five queued
+  alerts; now brobot keeps the limit itself (five per rolling minute, across
+  all viewers). Its connection count is relayed to the streamer client as
+  `overlay_status` (above).
 - **`/api/internal/transfer/*`**: see the next section.
 
 ## Internal transfer API (for api-time)
@@ -449,7 +454,9 @@ Every 30 minutes a wild level-1 Pokémon from the drop dex appears for two
 minutes (1 in 8 shiny). Channel-point rewards, received over EventSub:
 `Pokemon Create` (a random generation-1–4 Pokémon in the slot typed,
 replacing what is there), `Pokemon Level Up` (+1 for the starter),
-`Pokemon Roar` (the starter appears on the overlay) and `Enable Quacks`. A
+`Pokemon Roar` (the starter appears on the overlay), `DEBS Alert` (the
+viewer's message, censored, appears on the overlay like a news alert; five a
+minute across the channel, fulfilled when sent) and `Enable Quacks`. A
 redeem that cannot be honoured is refunded. brobot pauses its rewards when
 it shuts down and resumes them when it starts. Raids get a shout-out.
 

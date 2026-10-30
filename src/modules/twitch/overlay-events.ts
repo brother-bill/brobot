@@ -29,9 +29,19 @@ export interface PokemonRoarEvent {
     };
 }
 
+/** A viewer's `DEBS Alert` redeem: show their message on stream like a news alert. */
+export interface DebsAlertEvent {
+    type: 'debs_alert';
+    /** Who redeemed it (chat login). */
+    login: string;
+    displayName: string;
+    /** What they typed: already censored, trimmed, newlines turned into spaces, at most 500 characters. */
+    message: string;
+}
+
 /** Somebody typed `!quack` while quacks are enabled: play the duck. */
 export interface QuackEvent {
     type: 'quack';
 }
 
-export type OverlayEvent = PokemonRoarEvent | QuackEvent;
+export type OverlayEvent = PokemonRoarEvent | DebsAlertEvent | QuackEvent;
