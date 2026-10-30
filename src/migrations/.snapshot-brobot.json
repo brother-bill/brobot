@@ -24,7 +24,7 @@
         },
         "enabled": {
           "name": "enabled",
-          "type": "bool",
+          "type": "boolean",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -56,7 +56,7 @@
         },
         "updated_date": {
           "name": "updated_date",
-          "type": "timestamptz(6)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -75,20 +75,745 @@
       "schema": "public",
       "indexes": [
         {
+          "keyName": "command_setting_pkey",
           "columnNames": [
             "name"
           ],
           "composite": false,
-          "constraint": false,
-          "keyName": "command_setting_pkey",
-          "unique": true,
-          "primary": true
+          "constraint": true,
+          "primary": true,
+          "unique": true
         }
       ],
       "checks": [],
       "foreignKeys": {},
-      "nativeEnums": {},
-      "comment": null
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "uuid"
+        },
+        "updated_date": {
+          "name": "updated_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text[]",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "array"
+        }
+      },
+      "name": "pokemon_battle_outcome",
+      "schema": "public",
+      "indexes": [
+        {
+          "keyName": "pokemon_battle_outcome_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {},
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "uuid"
+        },
+        "updated_date": {
+          "name": "updated_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text[]",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "array"
+        }
+      },
+      "name": "pokemon_team_battle_outcome",
+      "schema": "public",
+      "indexes": [
+        {
+          "keyName": "pokemon_team_battle_outcome_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {},
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "oauth_id": {
+          "name": "oauth_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "created_date": {
+          "name": "created_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": "now()",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "roles": {
+          "name": "roles",
+          "type": "text[]",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{Viewer}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "array"
+        },
+        "updated_date": {
+          "name": "updated_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        }
+      },
+      "name": "twitch_user",
+      "schema": "public",
+      "indexes": [
+        {
+          "keyName": "twitch_user_pkey",
+          "columnNames": [
+            "oauth_id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {},
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "uuid"
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text[]",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "array"
+        },
+        "created_date": {
+          "name": "created_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": "now()",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "expiry_seconds": {
+          "name": "expiry_seconds",
+          "type": "int",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "user_oauth_id": {
+          "name": "user_oauth_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "updated_date": {
+          "name": "updated_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "obtainment_epoch": {
+          "name": "obtainment_epoch",
+          "type": "bigint",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "bigint"
+        }
+      },
+      "name": "twitch_streamer_auth",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "user_oauth_id"
+          ],
+          "composite": false,
+          "keyName": "twitch_streamer_auth_user_oauth_id_unique",
+          "constraint": true,
+          "primary": false,
+          "unique": true
+        },
+        {
+          "keyName": "twitch_streamer_auth_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "twitch_streamer_auth_user_oauth_id_foreign": {
+          "constraintName": "twitch_streamer_auth_user_oauth_id_foreign",
+          "columnNames": [
+            "user_oauth_id"
+          ],
+          "localTableName": "public.twitch_streamer_auth",
+          "referencedColumnNames": [
+            "oauth_id"
+          ],
+          "referencedTableName": "public.twitch_user",
+          "deleteRule": "cascade",
+          "updateRule": "cascade"
+        }
+      },
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "uuid"
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text[]",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "array"
+        },
+        "created_date": {
+          "name": "created_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": "now()",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "expiry_seconds": {
+          "name": "expiry_seconds",
+          "type": "int",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "user_oauth_id": {
+          "name": "user_oauth_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "updated_date": {
+          "name": "updated_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "obtainment_epoch": {
+          "name": "obtainment_epoch",
+          "type": "bigint",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "bigint"
+        }
+      },
+      "name": "twitch_bot_auth",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "user_oauth_id"
+          ],
+          "composite": false,
+          "keyName": "twitch_bot_auth_user_oauth_id_unique",
+          "constraint": true,
+          "primary": false,
+          "unique": true
+        },
+        {
+          "keyName": "twitch_bot_auth_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "twitch_bot_auth_user_oauth_id_foreign": {
+          "constraintName": "twitch_bot_auth_user_oauth_id_foreign",
+          "columnNames": [
+            "user_oauth_id"
+          ],
+          "localTableName": "public.twitch_bot_auth",
+          "referencedColumnNames": [
+            "oauth_id"
+          ],
+          "referencedTableName": "public.twitch_user",
+          "deleteRule": "cascade",
+          "updateRule": "cascade"
+        }
+      },
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "uuid"
+        },
+        "user_oauth_id": {
+          "name": "user_oauth_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "created_date": {
+          "name": "created_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": "now()",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "updated_date": {
+          "name": "updated_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        }
+      },
+      "name": "pokemon_team",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "user_oauth_id"
+          ],
+          "composite": false,
+          "keyName": "pokemon_team_user_oauth_id_unique",
+          "constraint": true,
+          "primary": false,
+          "unique": true
+        },
+        {
+          "keyName": "pokemon_team_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "pokemon_team_user_oauth_id_foreign": {
+          "constraintName": "pokemon_team_user_oauth_id_foreign",
+          "columnNames": [
+            "user_oauth_id"
+          ],
+          "localTableName": "public.pokemon_team",
+          "referencedColumnNames": [
+            "oauth_id"
+          ],
+          "referencedTableName": "public.twitch_user",
+          "deleteRule": "cascade",
+          "updateRule": "cascade"
+        }
+      },
+      "nativeEnums": {}
     },
     {
       "columns": {
@@ -142,15 +867,15 @@
         },
         "slot": {
           "name": "slot",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
-          "nullable": false,
+          "nullable": true,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": null,
           "comment": null,
           "enumItems": [],
@@ -158,15 +883,15 @@
         },
         "level": {
           "name": "level",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": "1",
           "comment": null,
           "enumItems": [],
@@ -174,7 +899,7 @@
         },
         "shiny": {
           "name": "shiny",
-          "type": "bool",
+          "type": "boolean",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -190,15 +915,15 @@
         },
         "wins": {
           "name": "wins",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": "0",
           "comment": null,
           "enumItems": [],
@@ -206,15 +931,15 @@
         },
         "losses": {
           "name": "losses",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": "0",
           "comment": null,
           "enumItems": [],
@@ -222,15 +947,15 @@
         },
         "draws": {
           "name": "draws",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": "0",
           "comment": null,
           "enumItems": [],
@@ -270,15 +995,15 @@
         },
         "dex_num": {
           "name": "dex_num",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": null,
           "comment": null,
           "enumItems": [],
@@ -398,7 +1123,7 @@
         },
         "created_date": {
           "name": "created_date",
-          "type": "timestamptz(6)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -414,7 +1139,7 @@
         },
         "updated_date": {
           "name": "updated_date",
-          "type": "timestamptz(6)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -465,7 +1190,7 @@
         },
         "pmd_first_transferred_at": {
           "name": "pmd_first_transferred_at",
-          "type": "timestamptz(6)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -481,15 +1206,15 @@
         },
         "level_at_departure": {
           "name": "level_at_departure",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": true,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": null,
           "comment": null,
           "enumItems": [],
@@ -500,348 +1225,105 @@
       "schema": "public",
       "indexes": [
         {
+          "keyName": "pokemon_user_oauth_id_index",
+          "columnNames": [
+            "user_oauth_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false
+        },
+        {
+          "keyName": "pokemon_team_id_index",
+          "columnNames": [
+            "team_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false
+        },
+        {
+          "keyName": "pokemon_level_index",
           "columnNames": [
             "level"
           ],
           "composite": false,
           "constraint": false,
-          "keyName": "pokemon_level_index",
-          "unique": false,
-          "primary": false
+          "primary": false,
+          "unique": false
         },
         {
+          "keyName": "pokemon_team_id_slot_unique",
+          "columnNames": [],
+          "composite": false,
+          "constraint": true,
+          "primary": false,
+          "unique": true,
+          "expression": "create unique index \"pokemon_team_id_slot_unique\" on \"pokemon\" (\"team_id\", \"slot\") where \"slot\" is not null"
+        },
+        {
+          "keyName": "pokemon_pkey",
           "columnNames": [
             "id"
           ],
           "composite": false,
-          "constraint": false,
-          "keyName": "pokemon_pkey",
-          "unique": true,
-          "primary": true
-        },
-        {
-          "columnNames": [
-            "team_id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "pokemon_team_id_index",
-          "unique": false,
-          "primary": false
-        },
-        {
-          "columnNames": [
-            "user_oauth_id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "pokemon_user_oauth_id_index",
-          "unique": false,
-          "primary": false
+          "constraint": true,
+          "primary": true,
+          "unique": true
         }
       ],
       "checks": [
         {
           "name": "pokemon_slot_check",
-          "columnName": "slot",
-          "definition": "CHECK (((slot >= 1) AND (slot <= 6)))",
-          "expression": "(slot >= 1) AND (slot <= 6)"
+          "expression": "slot is null or slot between 1 and 6",
+          "definition": "check ((slot is null or slot between 1 and 6))"
         }
       ],
       "foreignKeys": {
         "pokemon_team_id_foreign": {
+          "constraintName": "pokemon_team_id_foreign",
           "columnNames": [
             "team_id"
           ],
-          "constraintName": "pokemon_team_id_foreign",
           "localTableName": "public.pokemon",
-          "referencedTableName": "public.pokemon_team",
           "referencedColumnNames": [
             "id"
           ],
-          "updateRule": "cascade",
-          "deleteRule": "set null"
+          "referencedTableName": "public.pokemon_team",
+          "deleteRule": "set null",
+          "updateRule": "cascade"
         },
         "pokemon_user_oauth_id_foreign": {
-          "columnNames": [
-            "user_oauth_id"
-          ],
           "constraintName": "pokemon_user_oauth_id_foreign",
+          "columnNames": [
+            "user_oauth_id"
+          ],
           "localTableName": "public.pokemon",
-          "referencedTableName": "public.twitch_user",
           "referencedColumnNames": [
             "oauth_id"
           ],
-          "updateRule": "cascade",
-          "deleteRule": "cascade"
-        }
-      },
-      "nativeEnums": {},
-      "comment": null
-    },
-    {
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": true,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "uuid"
-        },
-        "updated_date": {
-          "name": "updated_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "outcome": {
-          "name": "outcome",
-          "type": "text[]",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": "'{}'",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "array"
-        }
-      },
-      "name": "pokemon_battle_outcome",
-      "schema": "public",
-      "indexes": [
-        {
-          "columnNames": [
-            "id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "pokemon_battle_outcome_pkey",
-          "unique": true,
-          "primary": true
-        }
-      ],
-      "checks": [],
-      "foreignKeys": {},
-      "nativeEnums": {},
-      "comment": null
-    },
-    {
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": true,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "uuid"
-        },
-        "user_oauth_id": {
-          "name": "user_oauth_id",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": true,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "created_date": {
-          "name": "created_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": "now()",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "updated_date": {
-          "name": "updated_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        }
-      },
-      "name": "pokemon_team",
-      "schema": "public",
-      "indexes": [
-        {
-          "columnNames": [
-            "id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "pokemon_team_pkey",
-          "unique": true,
-          "primary": true
-        },
-        {
-          "columnNames": [
-            "user_oauth_id"
-          ],
-          "composite": false,
-          "constraint": true,
-          "keyName": "pokemon_team_user_oauth_id_unique",
-          "unique": true,
-          "primary": false
-        }
-      ],
-      "checks": [],
-      "foreignKeys": {
-        "pokemon_team_user_oauth_id_foreign": {
-          "columnNames": [
-            "user_oauth_id"
-          ],
-          "constraintName": "pokemon_team_user_oauth_id_foreign",
-          "localTableName": "public.pokemon_team",
           "referencedTableName": "public.twitch_user",
-          "referencedColumnNames": [
-            "oauth_id"
-          ],
-          "updateRule": "cascade",
-          "deleteRule": "cascade"
+          "deleteRule": "cascade",
+          "updateRule": "cascade"
         }
       },
-      "nativeEnums": {},
-      "comment": null
+      "nativeEnums": {}
     },
     {
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "bigserial",
           "unsigned": false,
-          "autoincrement": false,
-          "primary": true,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "uuid"
-        },
-        "updated_date": {
-          "name": "updated_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "outcome": {
-          "name": "outcome",
-          "type": "text[]",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": "'{}'",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "array"
-        }
-      },
-      "name": "pokemon_team_battle_outcome",
-      "schema": "public",
-      "indexes": [
-        {
-          "columnNames": [
-            "id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "pokemon_team_battle_outcome_pkey",
-          "unique": true,
-          "primary": true
-        }
-      ],
-      "checks": [],
-      "foreignKeys": {},
-      "nativeEnums": {},
-      "comment": null
-    },
-    {
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "int8",
-          "unsigned": true,
           "autoincrement": true,
           "primary": true,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 64,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": null,
           "comment": null,
           "enumItems": [],
@@ -854,7 +1336,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
-          "unique": true,
+          "unique": false,
           "length": null,
           "precision": null,
           "scale": null,
@@ -932,15 +1414,15 @@
         },
         "level_before": {
           "name": "level_before",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": null,
           "comment": null,
           "enumItems": [],
@@ -948,15 +1430,15 @@
         },
         "level_after": {
           "name": "level_after",
-          "type": "int4",
+          "type": "int",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 32,
-          "scale": 0,
+          "precision": null,
+          "scale": null,
           "default": null,
           "comment": null,
           "enumItems": [],
@@ -964,7 +1446,7 @@
         },
         "at": {
           "name": "at",
-          "type": "timestamptz(6)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -983,16 +1465,18 @@
       "schema": "public",
       "indexes": [
         {
+          "keyName": "transfer_log_pokemon_id_id_index",
           "columnNames": [
+            "pokemon_id",
             "id"
           ],
-          "composite": false,
+          "composite": true,
           "constraint": false,
-          "keyName": "transfer_log_pkey",
-          "unique": true,
-          "primary": true
+          "primary": false,
+          "unique": false
         },
         {
+          "keyName": "transfer_log_pokemon_direction_nonce_unique",
           "columnNames": [
             "pokemon_id",
             "direction",
@@ -1000,522 +1484,37 @@
           ],
           "composite": true,
           "constraint": true,
-          "keyName": "transfer_log_pokemon_direction_nonce_unique",
-          "unique": true,
-          "primary": false
+          "primary": false,
+          "unique": true
         },
         {
+          "keyName": "transfer_log_pkey",
           "columnNames": [
-            "pokemon_id",
             "id"
           ],
-          "composite": true,
-          "constraint": false,
-          "keyName": "transfer_log_pokemon_id_id_index",
-          "unique": false,
-          "primary": false
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
         }
       ],
       "checks": [],
       "foreignKeys": {
         "transfer_log_pokemon_id_foreign": {
+          "constraintName": "transfer_log_pokemon_id_foreign",
           "columnNames": [
             "pokemon_id"
           ],
-          "constraintName": "transfer_log_pokemon_id_foreign",
           "localTableName": "public.transfer_log",
+          "referencedColumnNames": [
+            "id"
+          ],
           "referencedTableName": "public.pokemon",
-          "referencedColumnNames": [
-            "id"
-          ],
-          "updateRule": "cascade",
-          "deleteRule": "cascade"
+          "deleteRule": "cascade",
+          "updateRule": "cascade"
         }
       },
-      "nativeEnums": {},
-      "comment": null
-    },
-    {
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": true,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "uuid"
-        },
-        "access_token": {
-          "name": "access_token",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "refresh_token": {
-          "name": "refresh_token",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "scope": {
-          "name": "scope",
-          "type": "text[]",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": "'{}'",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "array"
-        },
-        "created_date": {
-          "name": "created_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": "now()",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "expiry_seconds": {
-          "name": "expiry_seconds",
-          "type": "int4",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": 32,
-          "scale": 0,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "integer"
-        },
-        "user_oauth_id": {
-          "name": "user_oauth_id",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": true,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "updated_date": {
-          "name": "updated_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "obtainment_epoch": {
-          "name": "obtainment_epoch",
-          "type": "int8",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": 64,
-          "scale": 0,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "bigint"
-        }
-      },
-      "name": "twitch_bot_auth",
-      "schema": "public",
-      "indexes": [
-        {
-          "columnNames": [
-            "id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "twitch_bot_auth_pkey",
-          "unique": true,
-          "primary": true
-        },
-        {
-          "columnNames": [
-            "user_oauth_id"
-          ],
-          "composite": false,
-          "constraint": true,
-          "keyName": "twitch_bot_auth_user_oauth_id_unique",
-          "unique": true,
-          "primary": false
-        }
-      ],
-      "checks": [],
-      "foreignKeys": {
-        "twitch_bot_auth_user_oauth_id_foreign": {
-          "columnNames": [
-            "user_oauth_id"
-          ],
-          "constraintName": "twitch_bot_auth_user_oauth_id_foreign",
-          "localTableName": "public.twitch_bot_auth",
-          "referencedTableName": "public.twitch_user",
-          "referencedColumnNames": [
-            "oauth_id"
-          ],
-          "updateRule": "cascade",
-          "deleteRule": "cascade"
-        }
-      },
-      "nativeEnums": {},
-      "comment": null
-    },
-    {
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": true,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "uuid"
-        },
-        "access_token": {
-          "name": "access_token",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "refresh_token": {
-          "name": "refresh_token",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "scope": {
-          "name": "scope",
-          "type": "text[]",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": "'{}'",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "array"
-        },
-        "created_date": {
-          "name": "created_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": "now()",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "expiry_seconds": {
-          "name": "expiry_seconds",
-          "type": "int4",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": 32,
-          "scale": 0,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "integer"
-        },
-        "user_oauth_id": {
-          "name": "user_oauth_id",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": true,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "updated_date": {
-          "name": "updated_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "obtainment_epoch": {
-          "name": "obtainment_epoch",
-          "type": "int8",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": 64,
-          "scale": 0,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "bigint"
-        }
-      },
-      "name": "twitch_streamer_auth",
-      "schema": "public",
-      "indexes": [
-        {
-          "columnNames": [
-            "id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "twitch_streamer_auth_pkey",
-          "unique": true,
-          "primary": true
-        },
-        {
-          "columnNames": [
-            "user_oauth_id"
-          ],
-          "composite": false,
-          "constraint": true,
-          "keyName": "twitch_streamer_auth_user_oauth_id_unique",
-          "unique": true,
-          "primary": false
-        }
-      ],
-      "checks": [],
-      "foreignKeys": {
-        "twitch_streamer_auth_user_oauth_id_foreign": {
-          "columnNames": [
-            "user_oauth_id"
-          ],
-          "constraintName": "twitch_streamer_auth_user_oauth_id_foreign",
-          "localTableName": "public.twitch_streamer_auth",
-          "referencedTableName": "public.twitch_user",
-          "referencedColumnNames": [
-            "oauth_id"
-          ],
-          "updateRule": "cascade",
-          "deleteRule": "cascade"
-        }
-      },
-      "nativeEnums": {},
-      "comment": null
-    },
-    {
-      "columns": {
-        "oauth_id": {
-          "name": "oauth_id",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": true,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "display_name": {
-          "name": "display_name",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "created_date": {
-          "name": "created_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": "now()",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "roles": {
-          "name": "roles",
-          "type": "text[]",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": "'{Viewer}'",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "array"
-        },
-        "updated_date": {
-          "name": "updated_date",
-          "type": "timestamptz(6)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        }
-      },
-      "name": "twitch_user",
-      "schema": "public",
-      "indexes": [
-        {
-          "columnNames": [
-            "oauth_id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "twitch_user_pkey",
-          "unique": true,
-          "primary": true
-        }
-      ],
-      "checks": [],
-      "foreignKeys": {},
-      "nativeEnums": {},
-      "comment": null
+      "nativeEnums": {}
     },
     {
       "columns": {
@@ -1542,7 +1541,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
-          "unique": true,
+          "unique": false,
           "length": null,
           "precision": null,
           "scale": null,
@@ -1601,7 +1600,7 @@
         },
         "updated_date": {
           "name": "updated_date",
-          "type": "timestamptz(6)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -1617,7 +1616,7 @@
         },
         "origin_date": {
           "name": "origin_date",
-          "type": "timestamptz(6)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -1633,7 +1632,7 @@
         },
         "registered_date": {
           "name": "registered_date",
-          "type": "timestamptz(6)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -1653,43 +1652,42 @@
       "indexes": [
         {
           "columnNames": [
-            "id"
-          ],
-          "composite": false,
-          "constraint": false,
-          "keyName": "twitch_user_registered_pkey",
-          "unique": true,
-          "primary": true
-        },
-        {
-          "columnNames": [
             "user_oauth_id"
           ],
           "composite": false,
-          "constraint": true,
           "keyName": "twitch_user_registered_user_oauth_id_unique",
-          "unique": true,
-          "primary": false
+          "constraint": true,
+          "primary": false,
+          "unique": true
+        },
+        {
+          "keyName": "twitch_user_registered_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
         }
       ],
       "checks": [],
       "foreignKeys": {
         "twitch_user_registered_user_oauth_id_foreign": {
+          "constraintName": "twitch_user_registered_user_oauth_id_foreign",
           "columnNames": [
             "user_oauth_id"
           ],
-          "constraintName": "twitch_user_registered_user_oauth_id_foreign",
           "localTableName": "public.twitch_user_registered",
-          "referencedTableName": "public.twitch_user",
           "referencedColumnNames": [
             "oauth_id"
           ],
-          "updateRule": "cascade",
-          "deleteRule": "cascade"
+          "referencedTableName": "public.twitch_user",
+          "deleteRule": "cascade",
+          "updateRule": "cascade"
         }
       },
-      "nativeEnums": {},
-      "comment": null
+      "nativeEnums": {}
     }
   ],
   "nativeEnums": {}
