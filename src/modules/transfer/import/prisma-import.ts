@@ -119,6 +119,8 @@ export function planImport(
     };
     const users = new Set<string>();
     const teams = new Set<string>();
+    /** `team#slot` → the Pokémon already imported into it. */
+    const slots = new Map<string, string>();
 
     for (const table of OLD_TABLE_NAMES) {
         const rawRows = source.get(table);
@@ -143,6 +145,7 @@ export function planImport(
                     id?: string;
                     twitch_user?: string;
                     team?: string | null;
+                    slot?: number;
                 };
                 const key = refs.oauth_id ?? refs.id ?? '';
                 if (seenKeys.has(key)) {
@@ -175,6 +178,18 @@ export function planImport(
                         `PokemonTeam ${refs.team} is not being imported`,
                     );
                 }
+                // The old bot tolerated two Pokémon in one slot; the new schema
+                // does not (pokemon_team_id_slot_unique), so refuse it here
+                // rather than fail the write.
+                const slotKey = table === 'Pokemon' && refs.team ? `${refs.team}#${refs.slot}` : null;
+                const holder = slotKey === null ? undefined : slots.get(slotKey);
+                if (holder !== undefined) {
+                    throw new RowMappingError(
+                        'slot',
+                        `team ${refs.team} slot ${refs.slot} already holds Pokemon ${holder}`,
+                    );
+                }
+                if (slotKey !== null) slots.set(slotKey, key);
                 seenKeys.add(key);
                 if (table === 'TwitchUser') users.add(key);
                 if (table === 'PokemonTeam') teams.add(key);
@@ -197,23 +212,6 @@ export function planImport(
         }
     }
 
-    const slots = new Map<string, number>();
-    for (const pokemon of plan.rows.Pokemon) {
-        if (pokemon.team === null) continue;
-        const slotKey = `${pokemon.team}#${pokemon.slot}`;
-        slots.set(slotKey, (slots.get(slotKey) ?? 0) + 1);
-    }
-    const shared = [...slots.entries()].filter(([, count]) => count > 1);
-    if (shared.length > 0) {
-        // The old bot tolerated two Pokémon in one slot (and de-duplicated on
-        // redeem). The new schema allows it too; this is for the operator.
-        plan.warnings.push(
-            `Pokemon: ${shared.length} (team, slot) pair(s) hold more than one Pokémon: ${shared
-                .slice(0, 10)
-                .map(([slotKey, count]) => `${slotKey} ×${count}`)
-                .join(', ')}${shared.length > 10 ? ', …' : ''}`,
-        );
-    }
     return plan;
 }
 

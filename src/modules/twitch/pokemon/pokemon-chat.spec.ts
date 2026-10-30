@@ -79,16 +79,17 @@ afterEach(() => {
 });
 
 describe('!pokemon team', () => {
-    it('links the team page and lists the team, showing a Pokémon away in PMD as such', async () => {
+    it('links the team page and lists the team, then the Pokémon away in PMD without a slot', async () => {
         const { store, said, type } = setup();
         store.give(
             'id-ash',
-            storedPokemon('id-ash', 2, 'Eevee', { level: 40, active_game: 'pmd' }),
+            storedPokemon('id-ash', null, 'Groudon', { level: 81, active_game: 'pmd' }),
+            storedPokemon('id-ash', 3, 'Eevee', { level: 40 }),
             storedPokemon('id-ash', 1, 'Pikachu', { level: 12, shiny: true }),
         );
         await type('ash', '!pokemon team');
         expect(said).toEqual([
-            'Check out your team here: https://brobot.test/pokemon/team?username=ash · 1. Lv 12 shiny Pikachu · 2. Lv 40 Eevee (away in PMD)',
+            'Check out your team here: https://brobot.test/pokemon/team?username=ash · 1. Lv 12 shiny Pikachu · 3. Lv 40 Eevee · away in PMD: Lv 81 Groudon',
         ]);
     });
 
@@ -102,7 +103,26 @@ describe('!pokemon team', () => {
 });
 
 describe('!pokemon delete / swap', () => {
-    it('refuses to delete a Pokémon away in PMD, and does not count it against the daily limit', async () => {
+    it('cannot reach a Pokémon away in PMD by the slot it left', async () => {
+        const { store, said, type } = setup();
+        store.give('id-ash', storedPokemon('id-ash', null, 'Groudon', { active_game: 'pmd' }), storedPokemon('id-ash', 2, 'Eevee'));
+        await type('ash', '!pokemon delete 1');
+        expect(said).toEqual(['You have no pokemon in slot 1']);
+        expect((await store.team('id-ash'))?.map(pokemon => pokemon.name)).toEqual(['Eevee', 'Groudon']);
+    });
+
+    it('swaps a Pokémon into slot 1 once the starter has left for PMD, so it can battle again', async () => {
+        const { store, said, type } = setup();
+        const groudon = storedPokemon('id-ash', null, 'Groudon', { active_game: 'pmd' });
+        const eevee = storedPokemon('id-ash', 2, 'Eevee', { level: 40 });
+        store.give('id-ash', groudon, eevee);
+        await type('ash', '!pokemon swap 2 1');
+        expect([eevee.slot, groudon.slot]).toEqual([1, null]);
+        await type('ash', '!pokemon battle');
+        expect(said).toEqual(['@ash, swap successful', expect.stringMatching(/^@ash's Level 40 Eevee wants to battle!/)]);
+    });
+
+    it('refuses to delete a Pokémon still holding a slot while away, and does not count it against the daily limit', async () => {
         const { store, said, type } = setup();
         store.give('id-ash', storedPokemon('id-ash', 1, 'Pikachu'), storedPokemon('id-ash', 2, 'Eevee', { active_game: 'pmd' }));
         await type('ash', '!pokemon delete 2');
@@ -153,7 +173,7 @@ describe('!pokemon delete / swap', () => {
         await type('ash', '!pokemon swap 1 2');
         store.give('id-ash', storedPokemon('id-ash', 1, 'Pikachu'));
         await type('ash', '!pokemon swap 1 1');
-        await type('ash', '!pokemon swap 1 2');
+        await type('ash', '!pokemon swap 2 3');
         expect(said).toEqual(['No team found', "Can't swap to same slot", 'One of your slots has no pokemon']);
     });
 });
@@ -317,14 +337,17 @@ describe('drops and !pokemon catch', () => {
         ]);
     });
 
-    it('skips a slot held by a Pokémon away in PMD, and refuses a full team', async () => {
+    it('lands in slot 1 when the starter has left for PMD, and refuses a full team', async () => {
         const ctx = setup([2, 2]);
-        ctx.store.give('id-ash', storedPokemon('id-ash', 1, 'Pikachu', { active_game: 'pmd' }));
+        ctx.store.give('id-ash', storedPokemon('id-ash', null, 'Pikachu', { active_game: 'pmd' }));
         ctx.store.give('id-full', ...[1, 2, 3, 4, 5, 6].map(slot => storedPokemon('id-full', slot, `P${slot}`)));
         await ctx.drops.startDrop(WILD);
         await ctx.type('ash', '!pokemon catch');
         await ctx.type('full', '!pokemon catch');
-        expect((await ctx.store.team('id-ash'))?.map(p => p.slot)).toEqual([1, 2]);
+        expect((await ctx.store.team('id-ash'))?.map(p => [p.slot, p.name])).toEqual([
+            [1, 'Eevee'],
+            [null, 'Pikachu'],
+        ]);
         expect(ctx.said.at(-1)).toBe("@full, can't catch pokemon because no slots available. You need to delete one first.");
     });
 });

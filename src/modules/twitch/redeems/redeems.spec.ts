@@ -170,6 +170,21 @@ describe('Pokemon Roar', () => {
         expect(dark.said).toEqual(['Streamer not connected to browser source. You will be refunded']);
         expect([away.settled, missing.settled, dark.settled]).toEqual([['refunded r1'], ['refunded r1'], ['refunded r1']]);
     });
+
+    it('roars whoever holds slot 1 once the starter has left for PMD (it gave up the slot)', async () => {
+        const ctx = setup();
+        ctx.store.give(
+            'id-ash',
+            storedPokemon('id-ash', null, 'Groudon', { level: 81, active_game: 'pmd' }),
+            storedPokemon('id-ash', 2, 'Pikachu'),
+        );
+        await ctx.redeem(redemption('Pokemon Roar'));
+        expect(ctx.said).toEqual(['@ash you have no starter pokemon. You have been refunded']);
+
+        await ctx.store.swap('id-ash', 2, 1);
+        await ctx.redeem(redemption('Pokemon Roar'));
+        expect(ctx.shown).toEqual([expect.objectContaining({ pokemon: expect.objectContaining({ name: 'Pikachu' }) })]);
+    });
 });
 
 describe('Enable Quacks', () => {

@@ -190,15 +190,16 @@ standard `{ statusCode, message, error }`; zod validation failures (400) add
 | Route | Response |
 |---|---|
 | `GET /api/pokemon/leaderboard` | Top 30 by level: `[{ level, name, nameId, shiny, activeGame: 'brobot' \| 'pmd', twitchUser: { displayName } }]` |
-| `GET /api/pokemon/teams?login=<twitch login>` | `{ displayName, pokemonTeam: { pokemon: TeamPokemon[] } \| null }`, sorted by slot. 400 if the login is not `[A-Za-z0-9_]{1,25}`; 404 if brobot has never seen that user; 502 if Twitch is down. **Rate-limited to 10/min per client; each login's answer is cached for 60 s.** |
+| `GET /api/pokemon/teams?login=<twitch login>` | `{ displayName, pokemonTeam: { pokemon: TeamPokemon[] } \| null }`, sorted by slot, then the Pokémon away in PMD (`slot: null`). 400 if the login is not `[A-Za-z0-9_]{1,25}`; 404 if brobot has never seen that user; 502 if Twitch is down. **Rate-limited to 10/min per client; each login's answer is cached for 60 s.** |
 | `GET /api/pokemon/battle-outcome` | Last `!pokemon battle`: `{ outcome: string[], updatedDate: string \| null }` |
 | `GET /api/pokemon/team-battle-outcome` | Last `!pokemon teambattle`, same shape |
 
-`TeamPokemon` is `{ name, nameId, slot, level, shiny, wins, losses, draws,
-item, moves: string[], dexNum, color, types: string[], gender, nature,
-ability, activeGame, createdDate, updatedDate }`. It carries no ids.
+`TeamPokemon` is `{ name, nameId, slot: number | null, level, shiny, wins,
+losses, draws, item, moves: string[], dexNum, color, types: string[], gender,
+nature, ability, activeGame, createdDate, updatedDate }`. It carries no ids.
 `activeGame: 'pmd'` means the Pokémon is away in pmd-online; show it as
-such.
+such. An away Pokémon holds no slot, so its `slot` is `null`: it is still on
+the team page (and the leaderboard), but not in a numbered slot.
 
 ### Commands
 
@@ -297,6 +298,11 @@ together.
 | 409 | `nonce_reused` | the nonce belongs to an earlier transition of this Pokémon, not its last one |
 | 409 | `not_forward_evolution` | return: `species` is not a forward evolution of the row's species |
 | 409 | `unknown_move` | return: a `moves` id that `@pkmn` does not know |
+| 409 | `team_full` | return: all six brobot slots are taken. Message: `your brobot team is full: free a slot with !pokemon delete <n> first` |
+
+api-time turns any 409 into `brobot_refused` carrying brobot's `message`.
+pmd-online does not show that message yet: it answers every `brobot_refused`
+with its own generic refusal line (`transfer.refusal.refused`).
 
 ### `TransferPokemon`
 
@@ -337,11 +343,16 @@ sends its `Idempotency-Key` uuid.
 **depart** (brobot → PMD) moves only a Pokémon whose `activeGame` is
 `brobot`. It sets `activeGame = 'pmd'`, `levelAtDeparture = level`,
 `pmdRegisterId`, and `pmd_first_transferred_at` if that is still null.
-`level` does not change: PMD applies its own cap of 100.
+`level` does not change: PMD applies its own cap of 100. It also gives up
+its team slot (`slot = null`): an away Pokémon holds none, so the viewer's
+slot 1 is free for a catch or a swap and Roar and battles keep working.
 
 **return** (PMD → brobot) moves only a Pokémon whose `activeGame` is `pmd`.
-It sets `activeGame = 'brobot'` and
-`level = max(level, levelAtDeparture ?? level, pmdLevel)`. **A level never
+It sets `activeGame = 'brobot'`, the lowest free slot of the viewer's team
+(slot 1 when free, as a catch does; read under the team's lock, so a catch
+cannot take the same slot meanwhile), and
+`level = max(level, levelAtDeparture ?? level, pmdLevel)`. With all six
+slots taken it is a 409 `team_full` and nothing moves. **A level never
 goes down.** A level-150 Pokémon that visited PMD as 100 comes back as 150.
 A level-40 Pokémon that PMD raised to 55 comes back as 55. `pmdRegisterId`
 and `levelAtDeparture` are kept.
@@ -419,8 +430,9 @@ DATABASE_URL_OLD=postgres://…old… DATABASE_URL=postgres://…new… pnpm run
   other than `M`/`F`/`N`, an id that is not a uuid, a NULL array element.
   NULL `text[]` columns become `{}`, except `roles`, which gets its default
   `{Viewer}`.
-- **Warns** about two Pokémon in the same team slot. The old bot allowed it,
-  and so does the new schema.
+- **Refuses** a second Pokémon in a team slot (`slot: team … slot n already
+  holds Pokemon …`). The old bot allowed it; the new schema does not
+  (`pokemon_team_id_slot_unique`).
 - After writing, it prints the row count of each new table, to compare
   against the old database (runbook §6 step 3).
 - Exit codes: `0` done, `1` a row could not be mapped (without
@@ -439,7 +451,7 @@ is new.
 | `!pokemon teambattle` | the same with every Pokémon on each team; wins and losses for all, no levels |
 | `!pokemon catch` | during a drop: a coin flip per throw, three throws, one catch per viewer, into the lowest free slot |
 | `!pokemon delete\|remove <slot>` | delete it; six a day per viewer, reset at midnight New York time |
-| `!pokemon swap\|switch <a> <b>` | swap two slots; the Pokémon keep their ids |
+| `!pokemon swap\|switch <a> <b>` | swap two slots, or move a Pokémon into an empty one; the Pokémon keep their ids |
 | `!pokemon create <user> <pokemon> <level> <shiny 0\|1>` | broadcaster, or a user with the `Admin` role, adds a Pokémon for someone |
 | `!chatban`, `!voiceban` | four distinct viewers → the streamer client blocks Enter for 5 min / mutes the mic for 30 s |
 | `!chess`, `!rps`, `!dice`, `!ping`, `!commands`, `!quack` | as before |
@@ -455,8 +467,11 @@ it shuts down and resumes them when it starts. Raids get a shout-out.
 
 **A Pokémon away in pmd-online** (`active_game = 'pmd'`, migration plan §4)
 is read-only here: it cannot battle, be swapped, deleted or replaced, level
-up or roar, and it still holds its slot. `!pokemon team` shows it as "away in
-PMD". A team battle fields the rest of the team.
+up or roar. It holds no slot (owner, 2026-10-29): leaving frees its slot, so
+a starter that leaves frees slot 1 for a catch or a swap, and coming back
+takes the lowest free slot (refused while all six are taken). `!pokemon team`
+lists the slotted team, then each away Pokémon as `away in PMD: Lv 81
+Groudon`, without a number. A team battle fields the rest of the team.
 
 ## Credits
 

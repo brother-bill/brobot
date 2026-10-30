@@ -36,7 +36,7 @@ export class PokemonWriteService {
 
     constructor(private readonly em: EntityManager) {}
 
-    /** The viewer's Pokémon by slot, or null when they have never had a team. */
+    /** The viewer's Pokémon by slot, those away in PMD (no slot) last; null when they have never had a team. */
     async team(oauthId: string): Promise<Pokemon[] | null> {
         const em = this.em.fork();
         const team = await em.findOne(PokemonTeam, { twitch_user: oauthId });
@@ -82,8 +82,17 @@ export class PokemonWriteService {
             const team = await this.lockTeam(em, oauthId, false);
             if (!team) throw new TeamRuleError('No team found');
             const [first, second] = planSwap(await em.find(Pokemon, { team }), a, b);
-            first.slot = b;
-            second.slot = a;
+            // `pokemon_team_id_slot_unique` is checked row by row, so the two
+            // cannot trade slots in one statement: park the first on null.
+            if (first) {
+                first.slot = null;
+                await em.flush();
+            }
+            if (second) {
+                second.slot = a;
+                await em.flush();
+            }
+            if (first) first.slot = b;
         });
     }
 

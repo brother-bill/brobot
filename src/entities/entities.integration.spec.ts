@@ -18,7 +18,7 @@ describe('brobot schema (Postgres)', () => {
         await orm.schema.clearDatabase();
     });
 
-    function pokemon(user: TwitchUser, team: PokemonTeam, slot: number) {
+    function pokemon(user: TwitchUser, team: PokemonTeam, slot: number | null) {
         return {
             name: 'Pikachu',
             name_id: 'pikachu',
@@ -61,6 +61,32 @@ describe('brobot schema (Postgres)', () => {
         const { em, user, team } = await seedUserWithTeam();
         em.create(Pokemon, pokemon(user, team, slot));
         await expect(em.flush()).rejects.toThrow(/pokemon_slot_check/);
+    });
+
+    it('lets a Pokémon hold no slot (away in PMD), however many of a team do', async () => {
+        const { em, user, team } = await seedUserWithTeam();
+        em.create(Pokemon, { ...pokemon(user, team, null), active_game: 'pmd' });
+        em.create(Pokemon, { ...pokemon(user, team, null), active_game: 'pmd' });
+        em.create(Pokemon, pokemon(user, team, 1));
+        await em.flush();
+        expect(await orm.em.fork().count(Pokemon, { slot: null })).toBe(2);
+    });
+
+    it('refuses a second Pokémon in a team slot (pokemon_team_id_slot_unique)', async () => {
+        const { em, user, team } = await seedUserWithTeam();
+        em.create(Pokemon, pokemon(user, team, 1));
+        await em.flush();
+        em.create(Pokemon, pokemon(user, team, 1));
+        await expect(em.flush()).rejects.toThrow(/pokemon_team_id_slot_unique/);
+    });
+
+    it('lets two teams use the same slot', async () => {
+        const { em, user, team } = await seedUserWithTeam();
+        const other = em.create(TwitchUser, { oauth_id: '43', display_name: 'Other' });
+        const otherTeam = em.create(PokemonTeam, { twitch_user: other });
+        em.create(Pokemon, pokemon(user, team, 1));
+        em.create(Pokemon, pokemon(other, otherTeam, 1));
+        await expect(em.flush()).resolves.toBeUndefined();
     });
 
     it('refuses an active_game other than brobot or pmd', async () => {

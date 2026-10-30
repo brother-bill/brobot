@@ -6,7 +6,7 @@ import { TwitchUser } from '../../../entities';
 import { TwitchOAuthClient } from '../../auth/twitch-oauth.client';
 import { catalogNameFor } from '../../commands/command-parser';
 import { CommandRegistryService } from '../../commands/command-registry.service';
-import { describeSlot, PokemonAwayError } from '../../pokemon/exclusivity';
+import { describeTeam, PokemonAwayError } from '../../pokemon/exclusivity';
 import { POKE_SLAUGHTER_ACTIONS, POKE_SLAUGHTER_APPROACHES } from '../../pokemon/poke-info';
 import { PokemonFactory, UnknownSpeciesError } from '../../pokemon/pokemon-factory';
 import { PokemonWriteService } from '../../pokemon/pokemon-write.service';
@@ -89,7 +89,7 @@ export class PokemonCommandsService implements OnModuleDestroy {
         if (!team) return this.chat.say('You have no pokemon team');
         if (team.length === 0) return this.chat.say('You have no pokemon in your team');
         await this.chat.say(
-            `Check out your team here: ${this.links.team(user.login)} · ${team.map(describeSlot).join(' · ')}`,
+            `Check out your team here: ${this.links.team(user.login)} · ${describeTeam(team).join(' · ')}`,
         );
     }
 

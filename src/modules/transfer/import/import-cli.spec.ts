@@ -70,8 +70,8 @@ describe('runImportCli', () => {
 
     it('with --continue, lists every bad row and imports the rest', async () => {
         const broken = FIXTURE.replace('\tpikachu\t1\t150\t', '\tpikachu\t0\t150\t').replace(
-            '\tditto\t2\t7\tf\t1\t1\t0\t\t{transform}\t132\tPurple\t{Normal}\tN',
-            '\tditto\t2\t7\tf\t1\t1\t0\t\t{transform}\t132\tPurple\t{Normal}\tX',
+            '\tditto\t3\t7\tf\t1\t1\t0\t\t{transform}\t132\tPurple\t{Normal}\tN',
+            '\tditto\t3\t7\tf\t1\t1\t0\t\t{transform}\t132\tPurple\t{Normal}\tX',
         );
         const dry = io({ 'dump.sql': broken });
         expect(await runImportCli(['dump.sql', '--dry-run', '--continue'], dry.io)).toBe(0);

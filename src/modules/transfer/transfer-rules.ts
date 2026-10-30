@@ -1,4 +1,5 @@
 import type { ActiveGame, Pokemon } from '../../entities/pokemon.entity';
+import { lowestFreeSlot } from '../pokemon/team-rules';
 import { evolutionOnReturn, unknownMoveIds } from './away-changes';
 import type { SpeciesColumns } from './away-changes';
 import type { TransferDirection } from './entities/transfer-log.entity';
@@ -35,6 +36,8 @@ export const TRANSFER_ERROR_CODES = {
     notForwardEvolution: 'not_forward_evolution',
     /** 409 — return: a move id in `moves` that `@pkmn` does not know. */
     unknownMove: 'unknown_move',
+    /** 409 — return: all six brobot slots are taken, so there is nowhere to put it. */
+    teamFull: 'team_full',
 } as const;
 export type TransferErrorCode = (typeof TRANSFER_ERROR_CODES)[keyof typeof TRANSFER_ERROR_CODES];
 
@@ -47,12 +50,16 @@ export type TransferState = Pick<
     | 'pmd_register_id'
     | 'pmd_first_transferred_at'
     | 'name_id'
+    | 'slot'
 >;
 
 /** The columns a transition may write. */
 export type TransferChanges = Partial<
     Omit<TransferState, 'name_id'> & SpeciesColumns & Pick<Pokemon, 'moves'>
 > & { active_game: ActiveGame };
+
+/** The slots of the owner's brobot team, read under the transition's lock. */
+export type TeamSlots = readonly Pick<Pokemon, 'slot'>[];
 
 /** A `transfer_log` row, as far as the rules care. */
 export interface LoggedTransition {
@@ -120,7 +127,8 @@ function replayOf(
 }
 
 /**
- * brobot → PMD. Moves only from `brobot`. Already in PMD under the same
+ * brobot → PMD. Moves only from `brobot`, and gives up its slot: an away
+ * Pokémon holds none (owner, 2026-10-29), so slot 1 stays usable. Already in PMD under the same
  * register row is a 200 without a write (api-time re-sends with a fresh nonce
  * when its own half rolled back after brobot committed); under any other
  * register row it is `pokemon_away`.
@@ -148,6 +156,7 @@ export function decideDepart(
         kind: 'move',
         changes: {
             active_game: 'pmd',
+            slot: null,
             level_at_departure: state.level,
             pmd_register_id: request.pmdRegisterId,
             pmd_first_transferred_at: state.pmd_first_transferred_at ?? now,
@@ -176,6 +185,10 @@ export function levelOnReturn(
  * left as (when the caller names one). Already home under that register row
  * is a 200 without a write.
  *
+ * It comes home into the lowest free slot of `team` (slot 1 when free, as a
+ * catch would), and is refused with `team_full` when all six are taken. A
+ * Pokémon that still holds a slot (it left before the slot rule) keeps it.
+ *
  * What changed while it was away comes home with it (owner requirement 5),
  * each part only when the request carries it: `species` when it is a forward
  * evolution of the row's own (the same species is no change; anything else
@@ -187,6 +200,7 @@ export function decideReturn(
     state: TransferState,
     request: ReturnRequest,
     history: TransitionHistory,
+    team: TeamSlots,
 ): TransferDecision {
     const registerMatches =
         request.pmdRegisterId === null || request.pmdRegisterId === state.pmd_register_id;
@@ -212,8 +226,17 @@ export function decideReturn(
         };
     }
 
+    const slot = state.slot ?? lowestFreeSlot(team);
+    if (slot === null) {
+        return {
+            kind: 'refuse',
+            code: TRANSFER_ERROR_CODES.teamFull,
+            message: 'your brobot team is full: free a slot with !pokemon delete <n> first',
+        };
+    }
+
     const level = levelOnReturn(state, request.pmdLevel);
-    const changes: TransferChanges = { active_game: 'brobot', level };
+    const changes: TransferChanges = { active_game: 'brobot', level, slot };
     if (request.species) {
         const evolution = evolutionOnReturn(state.name_id, request.species.nameId);
         if (evolution.kind === 'refuse') {

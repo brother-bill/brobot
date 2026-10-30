@@ -1,6 +1,7 @@
 import { LockMode } from '@mikro-orm/core';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { HttpException, Injectable, Logger } from '@nestjs/common';
+import { PokemonTeam } from '../../entities/pokemon-team.entity';
 import { Pokemon } from '../../entities/pokemon.entity';
 import type { ActiveGame } from '../../entities/pokemon.entity';
 import { TransferLog } from './entities/transfer-log.entity';
@@ -8,6 +9,7 @@ import type { TransferDirection } from './entities/transfer-log.entity';
 import { decideDepart, decideReturn, TRANSFER_ERROR_CODES } from './transfer-rules';
 import type {
     ReturnRequest,
+    TeamSlots,
     TransferDecision,
     TransferErrorCode,
     TransitionHistory,
@@ -116,7 +118,12 @@ export class TransferService {
         );
     }
 
-    /** Takes `ReturnBody`; `species` and `moves` may be left out entirely. */
+    /**
+     * Takes `ReturnBody`; `species` and `moves` may be left out entirely. The
+     * Pokémon comes home into a free slot of its team, read under the team's
+     * lock — the one every team change takes — so a catch cannot claim the
+     * same slot meanwhile.
+     */
     return(id: string, body: ReturnRequest & { twitchId: string }): Promise<TransferPokemon> {
         return this.transition(
             id,
@@ -124,8 +131,21 @@ export class TransferService {
             'return',
             body.nonce,
             body.pmdRegisterId,
-            (pokemon, history) => decideReturn(pokemon, body, history),
+            async (pokemon, history, em) =>
+                decideReturn(pokemon, body, history, await this.lockTeamSlots(em, pokemon)),
         );
+    }
+
+    /** The slots its team holds, with the team row locked; none for a Pokémon without a team. */
+    private async lockTeamSlots(em: EntityManager, pokemon: Pokemon): Promise<TeamSlots> {
+        if (!pokemon.team) return [];
+        const team = await em.findOne(
+            PokemonTeam,
+            { id: pokemon.team.id },
+            { lockMode: LockMode.PESSIMISTIC_WRITE },
+        );
+        if (!team) return [];
+        return em.find(Pokemon, { team, slot: { $ne: null } });
     }
 
     private async transition(
@@ -134,7 +154,11 @@ export class TransferService {
         direction: TransferDirection,
         nonce: string,
         pmdRegisterId: string | null,
-        decide: (pokemon: Pokemon, history: TransitionHistory) => TransferDecision,
+        decide: (
+            pokemon: Pokemon,
+            history: TransitionHistory,
+            em: EntityManager,
+        ) => TransferDecision | Promise<TransferDecision>,
     ): Promise<TransferPokemon> {
         return this.em.fork().transactional(async em => {
             const pokemon = await em.findOne(
@@ -158,7 +182,7 @@ export class TransferService {
                 { pokemon: id },
                 { orderBy: { id: 'desc' } },
             );
-            const decision = decide(pokemon, { sameNonce, last });
+            const decision = await decide(pokemon, { sameNonce, last }, em);
 
             if (decision.kind === 'refuse') throw keyedError(409, decision.code, decision.message);
             if (decision.kind === 'move') {
@@ -173,9 +197,10 @@ export class TransferService {
                     level_before: decision.levelBefore,
                     level_after: decision.levelAfter,
                 });
-                const { name_id: evolvedInto, moves } = decision.changes;
+                const { name_id: evolvedInto, moves, slot } = decision.changes;
                 this.logger.log(
                     `pokemon ${id} ${direction}: now in ${decision.changes.active_game}, level ${decision.levelBefore} → ${decision.levelAfter}` +
+                        (slot === undefined ? '' : slot === null ? ', gave up its slot' : `, slot ${slot}`) +
                         (evolvedInto ? `, evolved ${speciesBefore} → ${evolvedInto}` : '') +
                         (moves ? `, moves ${moves.join(', ')}` : ''),
                 );

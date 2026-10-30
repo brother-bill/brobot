@@ -1,6 +1,6 @@
 import { MikroORM } from '@mikro-orm/postgresql';
 import { buildOrmConfig } from '../../mikro-orm.config';
-import { PokemonBattleOutcome, PokemonTeamBattleOutcome } from '../../entities';
+import { Pokemon, PokemonBattleOutcome, PokemonTeam, PokemonTeamBattleOutcome, TwitchUser } from '../../entities';
 import { PokemonReadService } from './pokemon-read.service';
 
 /**
@@ -46,5 +46,23 @@ describe('PokemonReadService last battles (Postgres)', () => {
             outcome: ['team newest'],
             updatedDate: '2026-09-02T00:00:00.000Z',
         });
+    });
+
+    it('lists a team by slot, with Pokémon away in PMD last and no slot', async () => {
+        const em = orm.em.fork();
+        const user = em.create(TwitchUser, { oauth_id: '42', display_name: 'Ash' });
+        const team = em.create(PokemonTeam, { twitch_user: user });
+        const base = { shiny: false, dex_num: 1, color: 'Green', gender: 'M', nature: 'Hardy', ability: 'Overgrow', team, twitch_user: user };
+        em.create(Pokemon, { ...base, name: 'Groudon', name_id: 'groudon', slot: null, level: 81, active_game: 'pmd' });
+        em.create(Pokemon, { ...base, name: 'Onix', name_id: 'onix', slot: 3 });
+        em.create(Pokemon, { ...base, name: 'Pikachu', name_id: 'pikachu', slot: 1 });
+        await em.flush();
+
+        const response = await service.teamByOauthId('42');
+        expect(response?.pokemonTeam?.pokemon.map(pokemon => [pokemon.slot, pokemon.name, pokemon.activeGame])).toEqual([
+            [1, 'Pikachu', 'brobot'],
+            [3, 'Onix', 'brobot'],
+            [null, 'Groudon', 'pmd'],
+        ]);
     });
 });

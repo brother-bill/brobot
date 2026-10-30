@@ -15,7 +15,8 @@ export type GuardedAction = 'battle' | 'swap' | 'delete' | 'slot' | 'level-up' |
 /** The columns the rule reads. `Pokemon` rows satisfy it. */
 export interface HeldPokemon {
     name: string;
-    slot: number;
+    /** Null while away in PMD: an away Pokémon holds no slot. */
+    slot: number | null;
     active_game: ActiveGame;
 }
 
@@ -38,7 +39,8 @@ export class PokemonAwayError extends Error {
         readonly pokemon: HeldPokemon,
         readonly action: GuardedAction,
     ) {
-        super(`your ${pokemon.name} in slot ${pokemon.slot} is away in PMD and can't ${WHAT_IT_CANNOT_DO[action]}`);
+        const where = pokemon.slot === null ? '' : ` in slot ${pokemon.slot}`;
+        super(`your ${pokemon.name}${where} is away in PMD and can't ${WHAT_IT_CANNOT_DO[action]}`);
         this.name = 'PokemonAwayError';
     }
 }
@@ -53,12 +55,23 @@ export function battleReady<T extends HeldPokemon>(team: readonly T[]): T[] {
     return team.filter(pokemon => !isAwayInPmd(pokemon));
 }
 
+type ShownPokemon = HeldPokemon & { level: number; shiny: boolean };
+
 /**
- * One slot as `!pokemon team` shows it: `1. Lv 12 Pikachu`, or
- * `2. Lv 40 Eevee (away in PMD)`.
+ * One Pokémon as `!pokemon team` shows it: `1. Lv 12 Pikachu`, or
+ * `away in PMD: Lv 81 Groudon` for one that is away (it holds no slot, so no
+ * number).
  */
-export function describeSlot(pokemon: HeldPokemon & { level: number; shiny: boolean }): string {
-    const shiny = pokemon.shiny ? 'shiny ' : '';
-    const away = isAwayInPmd(pokemon) ? ' (away in PMD)' : '';
-    return `${pokemon.slot}. Lv ${pokemon.level} ${shiny}${pokemon.name}${away}`;
+export function describeSlot(pokemon: ShownPokemon): string {
+    const shown = `Lv ${pokemon.level} ${pokemon.shiny ? 'shiny ' : ''}${pokemon.name}`;
+    const away = isAwayInPmd(pokemon);
+    if (pokemon.slot === null) return away ? `away in PMD: ${shown}` : shown;
+    // A slotted Pokémon is never away; this only shows a row that predates the rule.
+    return `${pokemon.slot}. ${shown}${away ? ' (away in PMD)' : ''}`;
+}
+
+/** `!pokemon team`: the slotted team by slot, then the Pokémon away in PMD. */
+export function describeTeam(team: readonly ShownPokemon[]): string[] {
+    const rank = (pokemon: ShownPokemon) => pokemon.slot ?? Number.MAX_SAFE_INTEGER;
+    return [...team].sort((a, b) => rank(a) - rank(b)).map(describeSlot);
 }
