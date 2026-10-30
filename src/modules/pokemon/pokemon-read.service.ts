@@ -2,6 +2,7 @@ import { EntityManager } from '@mikro-orm/postgresql';
 import { Injectable } from '@nestjs/common';
 import { Pokemon, PokemonBattleOutcome, PokemonTeamBattleOutcome, TwitchUser } from '../../entities';
 import type { ActiveGame } from '../../entities';
+import { bySlot } from './team-rules';
 
 export const LEADERBOARD_SIZE = 100;
 
@@ -24,7 +25,8 @@ export interface BattleOutcomeResponse {
 export interface TeamPokemon {
     name: string;
     nameId: string;
-    slot: number;
+    /** 1–6; null while away in PMD (an away Pokémon holds no slot), and those come last. */
+    slot: number | null;
     level: number;
     shiny: boolean;
     wins: number;
@@ -106,7 +108,7 @@ export class PokemonReadService {
                 ? {
                       pokemon: team.pokemon
                           .getItems()
-                          .sort((a, b) => a.slot - b.slot)
+                          .sort(bySlot)
                           .map(toTeamPokemon),
                   }
                 : null,

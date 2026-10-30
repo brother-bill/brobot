@@ -1,5 +1,5 @@
 import { decideDepart, decideReturn, levelOnReturn, TRANSFER_ERROR_CODES } from './transfer-rules';
-import type { LoggedTransition, TransferState, TransitionHistory } from './transfer-rules';
+import type { LoggedTransition, TeamSlots, TransferState, TransitionHistory } from './transfer-rules';
 
 const REGISTER = '11111111-1111-4111-8111-111111111111';
 const OTHER_REGISTER = '22222222-2222-4222-8222-222222222222';
@@ -13,6 +13,7 @@ function home(overrides: Partial<TransferState> = {}): TransferState {
         level_at_departure: null,
         pmd_register_id: null,
         pmd_first_transferred_at: null,
+        slot: 1,
         ...overrides,
     };
 }
@@ -23,9 +24,14 @@ function away(overrides: Partial<TransferState> = {}): TransferState {
         level_at_departure: 40,
         pmd_register_id: REGISTER,
         pmd_first_transferred_at: new Date('2026-01-01T00:00:00Z'),
+        slot: null,
         ...overrides,
     });
 }
+
+/** The owner's team while the Pokémon is away: slot 1 is free, as it is once a starter leaves. */
+const TEAM: TeamSlots = [{ slot: 2 }, { slot: 3 }];
+const FULL_TEAM: TeamSlots = [1, 2, 3, 4, 5, 6].map(slot => ({ slot }));
 
 const NO_HISTORY: TransitionHistory = { sameNonce: null, last: null };
 
@@ -45,6 +51,7 @@ describe('decideDepart (brobot → PMD)', () => {
             kind: 'move',
             changes: {
                 active_game: 'pmd',
+                slot: null,
                 level_at_departure: 40,
                 pmd_register_id: REGISTER,
                 pmd_first_transferred_at: NOW,
@@ -52,6 +59,11 @@ describe('decideDepart (brobot → PMD)', () => {
             levelBefore: 40,
             levelAfter: 40,
         });
+    });
+
+    it('gives up its slot, slot 1 included, so the viewer keeps a usable team', () => {
+        const decision = decideDepart(home({ slot: 1 }), { pmdRegisterId: REGISTER, nonce: 'n1' }, NO_HISTORY, NOW);
+        expect(decision).toMatchObject({ kind: 'move', changes: { active_game: 'pmd', slot: null } });
     });
 
     it('keeps the first transfer time on every later trip', () => {
@@ -181,10 +193,10 @@ describe('decideReturn (PMD → brobot)', () => {
 
     it('brings an away Pokémon home at the higher level', () => {
         expect(
-            decideReturn(away(), { pmdRegisterId: REGISTER, pmdLevel: 55, nonce: 'n2' }, history),
+            decideReturn(away(), { pmdRegisterId: REGISTER, pmdLevel: 55, nonce: 'n2' }, history, TEAM),
         ).toEqual({
             kind: 'move',
-            changes: { active_game: 'brobot', level: 55 },
+            changes: { active_game: 'brobot', level: 55, slot: 1 },
             levelBefore: 40,
             levelAfter: 55,
         });
@@ -196,10 +208,11 @@ describe('decideReturn (PMD → brobot)', () => {
                 away({ level: 150, level_at_departure: 150 }),
                 { pmdRegisterId: null, pmdLevel: 100, nonce: 'n2' },
                 history,
+                TEAM,
             ),
         ).toMatchObject({
             kind: 'move',
-            changes: { active_game: 'brobot', level: 150 },
+            changes: { active_game: 'brobot', level: 150, slot: 1 },
         });
     });
 
@@ -209,6 +222,7 @@ describe('decideReturn (PMD → brobot)', () => {
                 away(),
                 { pmdRegisterId: OTHER_REGISTER, pmdLevel: 55, nonce: 'n2' },
                 history,
+                TEAM,
             ),
         ).toMatchObject({ kind: 'refuse', code: TRANSFER_ERROR_CODES.registerMismatch });
     });
@@ -220,6 +234,7 @@ describe('decideReturn (PMD → brobot)', () => {
                 home({ level: 55, pmd_register_id: REGISTER, level_at_departure: 40 }),
                 { pmdRegisterId: REGISTER, pmdLevel: 55, nonce: 'n2' },
                 { sameNonce: entry, last: entry },
+                TEAM,
             ),
         ).toEqual({ kind: 'unchanged', reason: 'replay' });
     });
@@ -230,6 +245,7 @@ describe('decideReturn (PMD → brobot)', () => {
                 away(),
                 { pmdRegisterId: REGISTER, pmdLevel: 90, nonce: 'n2' },
                 { sameNonce: logged(2, 'return', 'n2'), last: logged(3, 'depart', 'n3') },
+                TEAM,
             ),
         ).toMatchObject({ kind: 'refuse', code: TRANSFER_ERROR_CODES.nonceReused });
     });
@@ -240,6 +256,7 @@ describe('decideReturn (PMD → brobot)', () => {
                 home({ level: 55, pmd_register_id: REGISTER }),
                 { pmdRegisterId: REGISTER, pmdLevel: 99, nonce: 'n7' },
                 { sameNonce: null, last: logged(2, 'return', 'n2') },
+                TEAM,
             ),
         ).toEqual({ kind: 'unchanged', reason: 'already-there' });
     });
@@ -248,13 +265,13 @@ describe('decideReturn (PMD → brobot)', () => {
         const back = { pmdRegisterId: REGISTER, pmdLevel: 55, nonce: 'n2' };
 
         it('writes only the transfer columns when the request carries no species or moves', () => {
-            const decision = decideReturn(away(), back, history);
+            const decision = decideReturn(away(), back, history, TEAM);
             expect(decision).toEqual(
-                decideReturn(away(), { ...back, species: null, moves: null }, history),
+                decideReturn(away(), { ...back, species: null, moves: null }, history, TEAM),
             );
             expect(decision).toMatchObject({ kind: 'move' });
             if (decision.kind === 'move') {
-                expect(Object.keys(decision.changes).sort()).toEqual(['active_game', 'level']);
+                expect(Object.keys(decision.changes).sort()).toEqual(['active_game', 'level', 'slot']);
             }
         });
 
@@ -264,12 +281,14 @@ describe('decideReturn (PMD → brobot)', () => {
                     away(),
                     { ...back, species: { nameId: 'raichu' }, moves: ['thunder', 'irontail'] },
                     history,
+                    TEAM,
                 ),
             ).toEqual({
                 kind: 'move',
                 changes: {
                     active_game: 'brobot',
                     level: 55,
+                    slot: 1,
                     name: 'Raichu',
                     name_id: 'raichu',
                     dex_num: 26,
@@ -287,10 +306,11 @@ describe('decideReturn (PMD → brobot)', () => {
                 away(),
                 { ...back, species: { nameId: 'pikachu' } },
                 history,
+                TEAM,
             );
             expect(decision).toEqual({
                 kind: 'move',
-                changes: { active_game: 'brobot', level: 55 },
+                changes: { active_game: 'brobot', level: 55, slot: 1 },
                 levelBefore: 40,
                 levelAfter: 55,
             });
@@ -298,13 +318,13 @@ describe('decideReturn (PMD → brobot)', () => {
 
         it('refuses anything but a forward evolution (409 not_forward_evolution)', () => {
             expect(
-                decideReturn(away(), { ...back, species: { nameId: 'pichu' } }, history),
+                decideReturn(away(), { ...back, species: { nameId: 'pichu' } }, history, TEAM),
             ).toMatchObject({ kind: 'refuse', code: TRANSFER_ERROR_CODES.notForwardEvolution });
         });
 
         it('refuses a moveset with a move @pkmn does not know (409 unknown_move)', () => {
             expect(
-                decideReturn(away(), { ...back, moves: ['thunderbolt', 'notamove'] }, history),
+                decideReturn(away(), { ...back, moves: ['thunderbolt', 'notamove'] }, history, TEAM),
             ).toMatchObject({
                 kind: 'refuse',
                 code: TRANSFER_ERROR_CODES.unknownMove,
@@ -319,6 +339,7 @@ describe('decideReturn (PMD → brobot)', () => {
                     home({ name_id: 'raichu', level: 55, pmd_register_id: REGISTER }),
                     { ...back, species: { nameId: 'raichu' }, moves: ['thunder'] },
                     { sameNonce: entry, last: entry },
+                    TEAM,
                 ),
             ).toEqual({ kind: 'unchanged', reason: 'replay' });
         });
@@ -329,8 +350,66 @@ describe('decideReturn (PMD → brobot)', () => {
                     home({ name_id: 'raichu', level: 55, pmd_register_id: REGISTER }),
                     { ...back, nonce: 'n3', species: { nameId: 'raichu' }, moves: ['thunder'] },
                     { sameNonce: null, last: logged(2, 'return', 'n2') },
+                    TEAM,
                 ),
             ).toEqual({ kind: 'unchanged', reason: 'already-there' });
+        });
+    });
+
+    describe('the slot it comes home to (an away Pokémon holds none)', () => {
+        const back = { pmdRegisterId: REGISTER, pmdLevel: 55, nonce: 'n2' };
+
+        it('takes slot 1 when it is free', () => {
+            expect(decideReturn(away(), back, history, TEAM)).toMatchObject({
+                kind: 'move',
+                changes: { slot: 1 },
+            });
+            expect(decideReturn(away(), back, history, [])).toMatchObject({
+                kind: 'move',
+                changes: { slot: 1 },
+            });
+        });
+
+        it('otherwise takes the lowest free slot', () => {
+            expect(
+                decideReturn(away(), back, history, [{ slot: 1 }, { slot: 2 }, { slot: 4 }]),
+            ).toMatchObject({ kind: 'move', changes: { slot: 3 } });
+            expect(
+                decideReturn(away(), back, history, FULL_TEAM.filter(member => member.slot !== 6)),
+            ).toMatchObject({ kind: 'move', changes: { slot: 6 } });
+        });
+
+        it('ignores team members that hold no slot (others away in PMD)', () => {
+            expect(
+                decideReturn(away(), back, history, [{ slot: null }, { slot: 1 }, { slot: null }]),
+            ).toMatchObject({ kind: 'move', changes: { slot: 2 } });
+        });
+
+        it('keeps the slot of a Pokémon that left before the slot rule', () => {
+            expect(decideReturn(away({ slot: 4 }), back, history, FULL_TEAM)).toMatchObject({
+                kind: 'move',
+                changes: { slot: 4 },
+            });
+        });
+
+        it('refuses when all six slots are taken (409 team_full), writing nothing', () => {
+            expect(decideReturn(away(), back, history, FULL_TEAM)).toEqual({
+                kind: 'refuse',
+                code: TRANSFER_ERROR_CODES.teamFull,
+                message: 'your brobot team is full: free a slot with !pokemon delete <n> first',
+            });
+        });
+
+        it('still replays a repeated nonce when the team has since filled up', () => {
+            const entry = logged(2, 'return', 'n2');
+            expect(
+                decideReturn(
+                    home({ level: 55, pmd_register_id: REGISTER, level_at_departure: 40 }),
+                    back,
+                    { sameNonce: entry, last: entry },
+                    FULL_TEAM,
+                ),
+            ).toEqual({ kind: 'unchanged', reason: 'replay' });
         });
     });
 
@@ -350,6 +429,7 @@ describe('decideReturn (PMD → brobot)', () => {
                     state,
                     { pmdRegisterId: register, pmdLevel: 100, nonce: 'n5' },
                     NO_HISTORY,
+                    TEAM,
                 ),
             ).toMatchObject({
                 kind: 'refuse',

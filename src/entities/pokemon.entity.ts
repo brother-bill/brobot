@@ -1,4 +1,4 @@
-import { Check, Entity, Enum, Index, ManyToOne, OptionalProps, PrimaryKey, Property } from '@mikro-orm/core';
+import { Check, Entity, Enum, Index, ManyToOne, OptionalProps, PrimaryKey, Property, Unique } from '@mikro-orm/core';
 import type { Rel } from '@mikro-orm/core';
 import { randomUUID } from 'node:crypto';
 import { PokemonTeam } from './pokemon-team.entity';
@@ -19,12 +19,22 @@ export type ActiveGame = (typeof ACTIVE_GAMES)[number];
  * columns. The row uuid is the Pokémon's identity forever, including in
  * pmd-online (`pmd_registered_pokemon.originKey`).
  *
+ * An away Pokémon holds no slot (owner, 2026-10-29): `slot` is null while
+ * `active_game = 'pmd'`, and a return gives it the lowest free one. The team
+ * is the Pokémon that are here, so slot 1 is always one brobot can use.
+ *
  * `level` is deliberately unbounded: the 100 cap is PMD's rule, applied when a
  * Pokémon is brought there, and brobot levels past it (the leaderboard sorts
  * on this column).
  */
 @Entity({ tableName: 'pokemon' })
-@Check({ name: 'pokemon_slot_check', expression: 'slot between 1 and 6' })
+@Check({ name: 'pokemon_slot_check', expression: 'slot is null or slot between 1 and 6' })
+// One Pokémon per slot: the slot rules rely on it. Partial, so away Pokémon
+// (slot null) never collide; an expression because MikroORM 6 has no `where`.
+@Unique({
+    name: 'pokemon_team_id_slot_unique',
+    expression: 'create unique index "pokemon_team_id_slot_unique" on "pokemon" ("team_id", "slot") where "slot" is not null',
+})
 @Index({ properties: ['level'] })
 // Postgres does not index foreign keys; team pages and the bot look Pokémon up by both.
 @Index({ properties: ['team'] })
@@ -42,9 +52,12 @@ export class Pokemon {
     @Property({ type: 'text' })
     name_id!: string;
 
-    /** Team slot, 1–6 (enforced by `pokemon_slot_check`; the old schema had no constraint). */
-    @Property({ type: 'integer' })
-    slot!: number;
+    /**
+     * Team slot, 1–6 (enforced by `pokemon_slot_check`; the old schema had no
+     * constraint), unique within a team. Null while the Pokémon is away in PMD.
+     */
+    @Property({ type: 'integer', nullable: true })
+    slot!: number | null;
 
     @Property({ type: 'integer', default: 1 })
     level = 1;

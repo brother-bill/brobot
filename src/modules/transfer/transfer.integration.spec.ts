@@ -2,7 +2,7 @@ import { MikroORM } from '@mikro-orm/postgresql';
 import type { EntityManager } from '@mikro-orm/postgresql';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Pokemon, TwitchUser } from '../../entities';
+import { Pokemon, PokemonTeam, TwitchUser } from '../../entities';
 import { buildOrmConfig } from '../../mikro-orm.config';
 import { TransferLog } from './entities/transfer-log.entity';
 import { parseCopyDump } from './import/pg-text';
@@ -14,6 +14,8 @@ const DUMP = readFileSync(
     'utf8',
 );
 const PIKACHU = '0f6f8a4e-2b1c-4d3e-8f9a-1b2c3d4e5f60';
+/** Ash's team in the fixture: Pikachu in slot 1, Bulbasaur in 2, Ditto in 3. */
+const ASH_TEAM = '5b7d1f0e-6a51-4c1f-9d0a-0b8f3c2a4e11';
 const REGISTER = '11111111-1111-4111-8111-111111111111';
 
 /** The import and the transfer state machine against real Postgres. */
@@ -91,6 +93,7 @@ describe('Prisma import + transfer (Postgres)', () => {
             levelAtDeparture: 150,
             pmdRegisterId: REGISTER,
         });
+        expect((await em.fork().findOneOrFail(Pokemon, { id: PIKACHU })).slot).toBeNull();
         expect(
             await transfer.depart(PIKACHU, {
                 twitchId: '42',
@@ -150,6 +153,75 @@ describe('Prisma import + transfer (Postgres)', () => {
             moves: ['thunder', 'irontail'],
         });
         expect(await em.fork().count(TransferLog, { pokemon: PIKACHU })).toBe(2);
+    });
+
+    describe('slots: an away Pokémon holds none', () => {
+        async function slots(): Promise<Record<string, number | null>> {
+            const rows = await em.fork().find(Pokemon, { team: ASH_TEAM });
+            return Object.fromEntries(rows.map(row => [row.name_id, row.slot]));
+        }
+
+        async function catchInto(slot: number, nameId: string) {
+            const fork = em.fork();
+            const team = await fork.findOneOrFail(PokemonTeam, { id: ASH_TEAM });
+            fork.create(Pokemon, {
+                name: nameId,
+                name_id: nameId,
+                slot,
+                shiny: false,
+                dex_num: 1,
+                color: 'Green',
+                gender: 'M',
+                nature: 'Hardy',
+                ability: 'Overgrow',
+                team,
+                twitch_user: '42',
+            });
+            await fork.flush();
+        }
+
+        const away = { twitchId: '42', pmdRegisterId: REGISTER, nonce: 'd1' };
+        const home = { twitchId: '42', pmdRegisterId: REGISTER, pmdLevel: 100, nonce: 'r1' };
+
+        it('frees slot 1 when the starter departs, and takes it back on return when still free', async () => {
+            await importFixture();
+            const transfer = new TransferService(em);
+            await transfer.depart(PIKACHU, away);
+            expect(await slots()).toEqual({ pikachu: null, bulbasaur: 2, ditto: 3 });
+
+            await transfer.return(PIKACHU, home);
+            expect(await slots()).toEqual({ pikachu: 1, bulbasaur: 2, ditto: 3 });
+        });
+
+        it('returns into the lowest free slot once slot 1 has been filled', async () => {
+            await importFixture();
+            const transfer = new TransferService(em);
+            await transfer.depart(PIKACHU, away);
+            await catchInto(1, 'eevee');
+
+            await transfer.return(PIKACHU, home);
+            expect(await slots()).toEqual({ pikachu: 4, bulbasaur: 2, ditto: 3, eevee: 1 });
+        });
+
+        it('refuses a return to a full team with 409 team_full, moving nothing', async () => {
+            await importFixture();
+            const transfer = new TransferService(em);
+            await transfer.depart(PIKACHU, away);
+            for (const [slot, nameId] of [[1, 'eevee'], [4, 'onix'], [5, 'mew'], [6, 'abra']] as const) {
+                await catchInto(slot, nameId);
+            }
+
+            await expect(transfer.return(PIKACHU, home)).rejects.toMatchObject({
+                status: 409,
+                response: {
+                    code: 'team_full',
+                    message: 'your brobot team is full: free a slot with !pokemon delete <n> first',
+                },
+            });
+            const row = await em.fork().findOneOrFail(Pokemon, { id: PIKACHU });
+            expect([row.active_game, row.slot]).toEqual(['pmd', null]);
+            expect(await em.fork().count(TransferLog, { pokemon: PIKACHU, direction: 'return' })).toBe(0);
+        });
     });
 
     it('serialises concurrent departs of one Pokémon: one moves, the other replays', async () => {

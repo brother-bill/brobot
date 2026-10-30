@@ -8,7 +8,7 @@ import { assertInBrobot, isAwayInPmd } from '../src/modules/pokemon/exclusivity'
 import type { NewPokemon } from '../src/modules/pokemon/pokemon-factory';
 import type { BattleKind, PokemonWriteService, Trainer } from '../src/modules/pokemon/pokemon-write.service';
 import { Random } from '../src/modules/pokemon/random';
-import { inSlot, planCreateInSlot, planDelete, planSwap, slotForCatch, TeamRuleError } from '../src/modules/pokemon/team-rules';
+import { bySlot, inSlot, planCreateInSlot, planDelete, planSwap, slotForCatch, TeamRuleError } from '../src/modules/pokemon/team-rules';
 import { BotChatService } from '../src/modules/twitch/chat/bot-chat.service';
 import type { ChatUser } from '../src/modules/twitch/chat/chat-types';
 import { testEnvService } from './helpers';
@@ -58,7 +58,8 @@ let nextId = 1;
 
 export function storedPokemon(
     ownerId: string,
-    slot: number,
+    /** Null for a Pokémon away in PMD: it holds no slot. */
+    slot: number | null,
     name: string,
     extra: Partial<Pick<Pokemon, 'level' | 'shiny' | 'active_game' | 'wins' | 'losses' | 'draws'>> & {
         active_game?: ActiveGame;
@@ -106,7 +107,7 @@ export class MemoryPokemonStore implements Pick<
 
     async team(oauthId: string): Promise<Pokemon[] | null> {
         const team = this.teams.get(oauthId);
-        return team ? [...team].sort((a, b) => a.slot - b.slot) : null;
+        return team ? [...team].sort(bySlot) : null;
     }
 
     async starter(oauthId: string): Promise<Pokemon | null> {
@@ -132,8 +133,8 @@ export class MemoryPokemonStore implements Pick<
         const team = this.teams.get(oauthId);
         if (!team) throw new TeamRuleError('No team found');
         const [first, second] = planSwap(team, a, b);
-        first.slot = b;
-        second.slot = a;
+        if (first) first.slot = b;
+        if (second) second.slot = a;
     }
 
     async delete(oauthId: string, slot: number): Promise<Pokemon | null> {

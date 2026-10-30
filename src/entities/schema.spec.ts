@@ -55,7 +55,7 @@ describe('entity metadata → DDL', () => {
             '"id" uuid not null',
             '"name" text not null',
             '"name_id" text not null',
-            '"slot" int not null',
+            '"slot" int null',
             '"level" int not null default 1',
             '"shiny" boolean not null',
             '"wins" int not null default 0',
@@ -79,8 +79,14 @@ describe('entity metadata → DDL', () => {
         expect(columns).toContain('"level_at_departure" int null');
     });
 
-    it('constrains slot to 1..6', () => {
-        expect(ddl).toMatch(/constraint pokemon_slot_check check \(slot between 1 and 6\)/);
+    it('constrains slot to 1..6, or null for a Pokémon away in PMD', () => {
+        expect(ddl).toMatch(/constraint pokemon_slot_check check \(slot is null or slot between 1 and 6\)/);
+    });
+
+    it('holds one Pokémon per slot of a team, leaving unslotted (away) Pokémon out', () => {
+        expect(ddl).toContain(
+            'create unique index "pokemon_team_id_slot_unique" on "pokemon" ("team_id", "slot") where "slot" is not null;',
+        );
     });
 
     it('keys each token store to one user, bigint epoch, cascading on delete', () => {

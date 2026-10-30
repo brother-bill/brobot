@@ -23,7 +23,7 @@ SET row_security = off;
 COPY public."Pokemon" (id, name, "nameId", slot, level, shiny, wins, losses, draws, item, moves, "dexNum", color, types, gender, nature, ability, "teamId", "userOauthId", "createdDate", "updatedDate") FROM stdin;
 0f6f8a4e-2b1c-4d3e-8f9a-1b2c3d4e5f60	Pikachu	pikachu	1	150	t	31	4	2	Light Ball	{thunderbolt,quickattack,irontail,volttackle}	25	Yellow	{Electric}	F	Jolly	Static	5b7d1f0e-6a51-4c1f-9d0a-0b8f3c2a4e11	42	2022-11-30 13:06:40.123	2023-04-01 09:15:00.5
 1a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c80	Bulbasaur	bulbasaur	2	12	f	0	0	0		\N	1	Green	{Grass,Poison}	M	Modest	Overgrow	5b7d1f0e-6a51-4c1f-9d0a-0b8f3c2a4e11	42	2022-12-02 10:00:00	2022-12-02 10:00:00
-2b3c4d5e-6f7a-4b2c-9d3e-4f5a6b7c8d91	Ditto	ditto	2	7	f	1	1	0		{transform}	132	Purple	{Normal}	N	Hardy	Limber	5b7d1f0e-6a51-4c1f-9d0a-0b8f3c2a4e11	42	2022-12-03 11:00:00	2022-12-03 11:00:00
+2b3c4d5e-6f7a-4b2c-9d3e-4f5a6b7c8d91	Ditto	ditto	3	7	f	1	1	0		{transform}	132	Purple	{Normal}	N	Hardy	Limber	5b7d1f0e-6a51-4c1f-9d0a-0b8f3c2a4e11	42	2022-12-03 11:00:00	2022-12-03 11:00:00
 3C4D5E6F-7A8B-4C3D-8E4F-5A6B7C8D9EA2	Mr. Mime	mrmime	1	33	f	5	6	1		{psychic,barrier,"light screen"}	122	Pink	{Psychic}	M	Timid	Soundproof	8e2c4a90-1f3b-4d6e-a7c8-9b0d1e2f3a44	77	2022-12-10 20:30:00.001	2023-01-10 20:30:00.001
 4d5e6f7a-8b9c-4d4e-9f5a-6b7c8d9eafb3	Farfetch'd	farfetchd	3	20	t	2	0	0	Stick	{}	83	Brown	{Normal,Flying}	M	Brave	Keen Eye	\N	77	2022-12-11 08:00:00	2022-12-11 08:00:00
 \.

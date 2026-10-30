@@ -45,11 +45,33 @@ describe('planImport', () => {
         ]);
     });
 
-    it('warns (does not fail) on two Pokémon sharing a team slot, as the old bot allowed', () => {
-        const plan = planImport(parseCopyDump(FIXTURE).tables, { continueOnFailure: false });
-        expect(plan.warnings).toEqual([
-            expect.stringMatching(/^Pokemon: 1 \(team, slot\) pair\(s\).*#2 ×2$/),
+    it('warns about nothing on the fixture dump', () => {
+        expect(planImport(parseCopyDump(FIXTURE).tables, { continueOnFailure: false }).warnings).toEqual([]);
+    });
+
+    it('refuses a second Pokémon in a team slot, which the old bot allowed and the new schema does not', () => {
+        const second = '55555555-5555-4555-8555-555555555555';
+        const plan = planImport(
+            source({
+                TwitchUser: [oldRow('TwitchUser')],
+                PokemonTeam: [oldRow('PokemonTeam')],
+                Pokemon: [
+                    oldRow('Pokemon', { slot: '2' }),
+                    oldRow('Pokemon', { id: second, slot: '2' }),
+                    oldRow('Pokemon', { id: '66666666-6666-4666-8666-666666666666', slot: '3' }),
+                ],
+            }),
+            { continueOnFailure: true },
+        );
+        expect(plan.failures).toEqual([
+            {
+                table: 'Pokemon',
+                row: 2,
+                key: second,
+                reason: 'slot: team 5b7d1f0e-6a51-4c1f-9d0a-0b8f3c2a4e11 slot 2 already holds Pokemon 0f6f8a4e-2b1c-4d3e-8f9a-1b2c3d4e5f60',
+            },
         ]);
+        expect(plan.rows.Pokemon).toHaveLength(2);
     });
 
     it('warns about a table the source does not have', () => {
