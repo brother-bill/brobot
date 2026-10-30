@@ -14,8 +14,8 @@ const HEARTBEAT_MS = 15_000;
 type TrackedSocket = WebSocket & { isAlive?: boolean };
 
 /**
- * The stream overlay's socket (the old `AdminUiGateway`): Pokémon roars and
- * quacks go out to every connected browser source. See `overlay-events.ts`
+ * The stream overlay's socket (the old `AdminUiGateway`): Pokémon roars, DEBS
+ * alerts and quacks go out to every connected browser source. See `overlay-events.ts`
  * for why it has no secret.
  */
 @WebSocketGateway({ path: OVERLAY_SOCKET_PATH })
