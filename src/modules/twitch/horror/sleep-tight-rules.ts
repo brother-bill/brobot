@@ -17,8 +17,9 @@ export interface SleepTightDreamRules {
     special: string;
 }
 
-export const SLEEP_TIGHT_COMMON =
-    '!help or !mess (one each per 30 s, add @name to aim), type 1-4 when a CHAT VOTE is up, !bet <name> on who goes down first';
+// Short on purpose (owner, 2026-10-30): the cooldowns, @name aiming and the 1-4 votes are not explained up front; the vote panel
+// says what to type on screen, and a spammer is told at that point.
+export const SLEEP_TIGHT_COMMON = 'Bet on who goes down first: !bet <name>';
 
 export const SLEEP_TIGHT_RULES: Readonly<Record<string, SleepTightDreamRules>> = {
     neverending: { name: 'Wake Up', help: 'a sugar rush', mess: 'glued shoes or a shove', special: '' },
@@ -51,7 +52,7 @@ export const SLEEP_TIGHT_RULES: Readonly<Record<string, SleepTightDreamRules>> =
     leesin: { name: 'Master Yourself', help: 'tickles the Teemos', mess: 'a decoy Teemo laugh', special: '' },
     convict: { name: 'Fast & Felonious', help: 'nitro for the convict', mess: 'nitro for the cops', special: '' },
     rumbling: { name: 'The Rumbling', help: 'spurs a cow on', mess: 'feeds the titan', special: '' },
-    ds: { name: 'Lights Out', help: 'mom puts the kettle on', mess: 'a creaky floorboard', special: '' },
+    ds: { name: 'Lights Out', help: 'the kettle (mom is busy a moment)', mess: 'a creaky floorboard', special: '' },
 };
 
 /** The chat line for a dream (an unknown id gets the shared rules under the name the game sent). */
@@ -59,11 +60,11 @@ export function sleepTightRulesLine(dreamId: string, gameName?: string): string 
     const key = dreamId.trim().toLowerCase();
     const rules: SleepTightDreamRules | undefined = Object.hasOwn(SLEEP_TIGHT_RULES, key) ? SLEEP_TIGHT_RULES[key] : undefined;
     const fallback = gameName?.trim() ?? '';
-    const parts = [`SLEEP TIGHT, next dream: ${rules ? rules.name : fallback.length > 0 ? fallback : 'the next dream'}.`];
+    const parts = [`SLEEP TIGHT: ${rules ? rules.name : fallback.length > 0 ? fallback : 'the next dream'}.`];
     if (rules) {
         parts.push(`!help = ${rules.help}, !mess = ${rules.mess}.`);
         if (rules.special) parts.push(`${rules.special}.`);
     }
-    parts.push(`Everyone: ${SLEEP_TIGHT_COMMON}.`);
+    parts.push(`${SLEEP_TIGHT_COMMON}.`);
     return `/me ${parts.join(' ')}`;
 }
