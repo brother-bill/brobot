@@ -12,6 +12,7 @@ import { OverlayGateway } from './overlay.gateway';
 import { PokemonBattlesService } from './pokemon/pokemon-battles.service';
 import { PokemonCommandsService } from './pokemon/pokemon-commands.service';
 import { PokemonDropsService } from './pokemon/pokemon-drops.service';
+import { DebsAlertService } from './redeems/debs-alert.service';
 import { PokemonRedeemsService } from './redeems/pokemon-redeems.service';
 import { REDEMPTION_SETTLER } from './redeems/redemption';
 import { HORROR_CHAT, HORROR_MODE, HORROR_STREAMER, HorrorChatService } from './horror/horror-chat.service';
@@ -63,6 +64,7 @@ import { VotesService } from './votes/votes.service';
         PokemonDropsService,
         PokemonCommandsService,
         PokemonRedeemsService,
+        DebsAlertService,
         FunCommandsService,
         ChessService,
         { provide: AiCompleter, useClass: OpenAiCompleter },

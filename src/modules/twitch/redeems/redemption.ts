@@ -23,6 +23,7 @@ export const REWARD_TITLES = {
     pokemonLevelUp: 'Pokemon Level Up',
     pokemonCreate: 'Pokemon Create',
     enableQuacks: 'Enable Quacks',
+    debsAlert: 'DEBS Alert',
 } as const;
 
 /**

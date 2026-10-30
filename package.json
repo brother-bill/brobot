@@ -19,6 +19,7 @@
         "import:prisma-dump": "ts-node --transpile-only -P tsconfig.app.json scripts/import-prisma-dump.ts"
     },
     "dependencies": {
+        "@2toad/profanity": "^3.3.0",
         "@mikro-orm/cli": "^6.6.14",
         "@mikro-orm/core": "^6.6.14",
         "@mikro-orm/migrations": "^6.6.14",

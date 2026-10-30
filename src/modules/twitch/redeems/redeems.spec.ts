@@ -7,6 +7,7 @@ import type { OverlayGateway } from '../overlay.gateway';
 import type { OverlayEvent } from '../overlay-events';
 import type { StreamerGateway } from '../streamer.gateway';
 import type { StreamerServerEvent } from '../streamer-events';
+import { DebsAlertService } from './debs-alert.service';
 import { HorrorRedeemsService } from './horror-redeems.service';
 import type { HorrorRewardsService } from './horror-rewards.service';
 import type { HorrorMode } from '../horror/horror-mode.service';
@@ -45,7 +46,10 @@ function setup(overlayClients = 1, streamerClients = 1, horrorLive = true, horro
     const shown: OverlayEvent[] = [];
     const overlay = {
         clientCount: overlayClients,
-        broadcast: (event: OverlayEvent) => shown.push(event),
+        broadcast: (event: OverlayEvent) => {
+            shown.push(event);
+            return overlayClients;
+        },
     } as unknown as OverlayGateway;
     const factory = { randomFromDex: async () => ({ ...FRESH }) } as unknown as PokemonFactory;
     const random = new ScriptedRandom();
@@ -80,8 +84,9 @@ function setup(overlayClients = 1, streamerClients = 1, horrorLive = true, horro
         mode: horrorMode,
         mode$: of(horrorMode),
     });
-    const router = new RedemptionsService(pokemonRedeems, fun, horror);
-    return { said, store, settled, shown, sent, registry, redeem: (r: Redemption) => router.handle(r) };
+    const debsAlert = new DebsAlertService(chat, overlay, settler);
+    const router = new RedemptionsService(pokemonRedeems, fun, horror, debsAlert);
+    return { said, store, settled, shown, sent, registry, debsAlert, redeem: (r: Redemption) => router.handle(r) };
 }
 
 describe('Pokemon Create', () => {
@@ -205,6 +210,59 @@ describe('Enable Quacks', () => {
         await ctx.redeem(redemption('Enable Quacks'));
         expect(ctx.said).toEqual(["/me trama is not connected to browser source, so quacks won't work. You have been refunded"]);
         expect(ctx.registry.isEnabled('quack')).toBe(false);
+    });
+});
+
+describe('DEBS Alert', () => {
+    it('sends the message to every overlay and fulfils the redemption', async () => {
+        const ctx = setup(2);
+        await ctx.redeem(redemption('DEBS Alert', '  breaking news:\r\n\n  the duck is loose  '));
+        expect(ctx.shown).toEqual([
+            { type: 'debs_alert', login: 'ash', displayName: 'Ash', message: 'breaking news: the duck is loose' },
+        ]);
+        expect(ctx.settled).toEqual(['fulfilled r1']);
+        expect(ctx.said).toEqual([]);
+    });
+
+    it('caps the message at 500 characters', async () => {
+        const ctx = setup();
+        await ctx.redeem(redemption('DEBS Alert', 'a'.repeat(600)));
+        expect(ctx.shown).toEqual([expect.objectContaining({ message: 'a'.repeat(500) })]);
+    });
+
+    it('censors profanity before it reaches the overlay', async () => {
+        const ctx = setup();
+        await ctx.redeem(redemption('DEBS Alert', 'what the shit is this'));
+        expect(ctx.shown).toEqual([expect.objectContaining({ message: 'what the @#$%&! is this' })]);
+        expect(ctx.settled).toEqual(['fulfilled r1']);
+    });
+
+    it('refunds when no overlay is connected', async () => {
+        const ctx = setup(0);
+        await ctx.redeem(redemption('DEBS Alert', 'hello'));
+        expect(ctx.shown).toEqual([]);
+        expect(ctx.settled).toEqual(['refunded r1']);
+        expect(ctx.said).toEqual(['/me @ash, streamer not connected to browser source. You will be refunded']);
+    });
+
+    it('refunds past five alerts in a rolling minute, across viewers', async () => {
+        const ctx = setup();
+        let clock = 1_000_000;
+        ctx.debsAlert.now = () => clock;
+        for (let i = 0; i < 5; i++) {
+            await ctx.redeem({ ...redemption('DEBS Alert', `alert ${i}`), id: `r${i}`, login: `viewer${i}` });
+            clock += 10_000;
+        }
+        await ctx.redeem({ ...redemption('DEBS Alert', 'one too many'), id: 'r5' });
+        expect(ctx.shown).toHaveLength(5);
+        expect(ctx.settled).toEqual(['fulfilled r0', 'fulfilled r1', 'fulfilled r2', 'fulfilled r3', 'fulfilled r4', 'refunded r5']);
+        expect(ctx.said).toEqual(['/me @ash, too many alerts queued, try again in a minute. You have been refunded']);
+
+        // the first alert (at 1_000_000) leaves the window at 1_060_000; a slot opens
+        clock = 1_060_000;
+        await ctx.redeem({ ...redemption('DEBS Alert', 'my turn'), id: 'r6' });
+        expect(ctx.shown).toHaveLength(6);
+        expect(ctx.settled.at(-1)).toBe('fulfilled r6');
     });
 });
 
