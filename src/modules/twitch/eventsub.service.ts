@@ -39,10 +39,11 @@ export const EVENTSUB_PATH_PREFIX = '/twitch';
  *
  * Subscribed: channel-point redemptions (the Pokémon rewards and `Enable
  * Quacks`), incoming raids (a shout-out) and, when the Discord announcement
- * is configured ({@link GoLiveService}), the stream going live. Webhook
- * subscriptions use an app token; Twitch checks the streamer's own grant
- * (`channel:read:redemptions`, from the streamer OAuth flow) when it creates
- * the redemption one. `stream.online` needs no grant.
+ * is configured ({@link GoLiveService}), the stream going live and ending.
+ * Webhook subscriptions use an app token; Twitch checks the streamer's own
+ * grant (`channel:read:redemptions`, from the streamer OAuth flow) when it
+ * creates the redemption one. `stream.online` and `stream.offline` need no
+ * grant.
  */
 @Injectable()
 export class EventSubService {
@@ -125,6 +126,7 @@ export class EventSubService {
                         broadcasterId: event.broadcasterId,
                         login: event.broadcasterName,
                         displayName: event.broadcasterDisplayName,
+                        startedAt: event.startDate,
                     },
                     async () => {
                         const channel = await apiClient.channels.getChannelInfoById(event.broadcasterId);
@@ -132,8 +134,35 @@ export class EventSubService {
                     },
                 );
             });
+            middleware.onStreamOffline(streamerId, event => {
+                void this.goLive.streamOffline(event.broadcasterId);
+            });
+            await this.resumeOnAir(apiClient, streamerId);
         } else {
             this.logger.log('Discord go-live announcement is off (DISCORD_BOT_URL unset)');
+        }
+    }
+
+    /** A stream already on air as brobot starts: its end is still marked on its go-live post. */
+    private async resumeOnAir(apiClient: ApiClient, streamerId: string): Promise<void> {
+        try {
+            const stream = await apiClient.streams.getStreamByUserId(streamerId);
+            if (!stream) return;
+            this.goLive.resume(
+                {
+                    streamId: stream.id,
+                    type: stream.type,
+                    broadcasterId: stream.userId,
+                    login: stream.userName,
+                    displayName: stream.userDisplayName,
+                    startedAt: stream.startDate,
+                },
+                { title: stream.title, gameName: stream.gameName },
+            );
+        } catch (error) {
+            this.logger.warn(
+                `Could not ask Helix whether the stream is on air: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
     }
 }

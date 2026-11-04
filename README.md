@@ -111,15 +111,23 @@ preview image, the channel link and `ping: role`. The bot's server file
 (`announce.projects.brobot`: `kinds.stream-live` and `ping_role`) picks the
 channel and the role; brobot names neither. A 5xx or an unreachable bot is
 retried for about four minutes with the same idempotency key, so it posts
-once; a 4xx (an unrouted kind, a missing role) is logged and not retried. The
-code is `src/modules/twitch/go-live/`. Turning it on (the bot's route, the
+once; a 4xx (an unrouted kind, a missing role) is logged and not retried.
+When the stream ends (`stream.offline`), brobot edits that post through
+`POST /api/internal/announce/edit`, addressed by the same idempotency key:
+"was live" in the title, what was streamed and for how long, a link to the
+past broadcasts, no preview image, and `Was live` in the footer. What is on
+air is held in memory; at startup brobot asks Helix whether the stream is
+already live, so a deploy mid-stream still marks its end. The bot remembers
+a key for 24 hours and not across its own restart; a post it has forgotten
+(`404 unknown_post`) is logged and left as it is. The code is
+`src/modules/twitch/go-live/`. Turning it on (the bot's route, the
 env, the chart allowlist) and what is not built yet: the superproject's
 `guidelines/discord/twitch.md`.
 
 | Bot switches (optional) | |
 |---|---|
 | `TWITCH_BOT_ENABLED` | default `true`. `false` keeps chat, drops and reward handling offline; the API and sockets still serve. |
-| `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids, and to the stream going live when `DISCORD_BOT_URL` is set. nginx must pass `/twitch/` to the API. |
+| `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids, and to the stream going live and ending when `DISCORD_BOT_URL` is set. nginx must pass `/twitch/` to the API. |
 | `OPENAI_MODEL` | default `gpt-4o-mini`; the model behind the `@bro_____bot` reply. |
 | `TWITCH_PREDICTION_TITLE` | default `Will Trama Win This Game?`, ≤ 45 chars: the streamer client's `create_prediction` hotkey. |
 | `TWITCH_PREDICTION_OUTCOMES` | default `Yes,No`: comma-separated, 2–10, each ≤ 25 chars. |
