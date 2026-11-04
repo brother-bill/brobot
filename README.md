@@ -107,12 +107,12 @@ When the streamer goes live (EventSub `stream.online`, live broadcasts only,
 so not a rerun or premiere), brobot posts one announcement per broadcast to
 the discord-bot's `POST /api/internal/announce`: `project: brobot`,
 `kind: stream-live`, the stream's title and category (from Helix), Twitch's
-preview image, the channel link and `ping: role`. The bot's server file
-(`announce.projects.brobot`: `kinds.stream-live` and `ping_role`) picks the
-channel and the role; brobot names neither. A 5xx or an unreachable bot is
-retried for about four minutes with the same idempotency key, so it posts
-once; a 4xx (an unrouted kind, a missing role) is logged and not retried. The
-code is `src/modules/twitch/go-live/`. Turning it on (the bot's route, the
+preview image, the channel link and `ping: none`: it pings nobody, since
+Discord announcements never ping by default (owner, 2026-10-19). The bot's
+server file (`announce.projects.brobot.kinds.stream-live`) picks the channel;
+brobot never names one. A 5xx or an unreachable bot is retried for about four
+minutes with the same idempotency key, so it posts once; a 4xx (an unrouted
+kind, a missing channel) is logged and not retried. The code is `src/modules/twitch/go-live/`. Turning it on (the bot's route, the
 env, the chart allowlist) and what is not built yet: the superproject's
 `guidelines/discord/twitch.md`.
 

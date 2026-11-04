@@ -34,9 +34,10 @@ export const GO_LIVE_RETRY_DELAYS_MS = [5_000, 15_000, 60_000, 180_000] as const
 /**
  * Announces the streamer going live in the Discord, through the discord-bot's
  * announce endpoint: the stream's title, its category, the preview image and
- * a link, pinging the role `announce.projects.brobot.ping_role` names in the
- * bot's server file. The channel is the bot's choice too
- * (`kinds.stream-live`).
+ * a link, in the channel the bot's server file routes it to
+ * (`announce.projects.brobot.kinds.stream-live`). It pings nobody: Discord
+ * announcements never ping by default (owner, 2026-10-19), and going live is
+ * not the emergency an opted-in `ping: 'role'` is for.
  *
  * Off unless `DISCORD_BOT_URL` (and so `DISCORD_INTERNAL_API_TOKEN`) is set.
  * Twitch retries a webhook delivery, and this retries the bot, both with the
@@ -159,7 +160,7 @@ export function goLiveAnnouncement(
         // Twitch's live preview. Discord caches an image by its URL, so the
         // stream id keeps one broadcast's preview from showing on the next.
         image: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${stream.login}-1280x720.jpg?stream=${stream.streamId}`,
-        ping: 'role',
+        ping: 'none',
         idempotency_key: `twitch:stream-live:${stream.broadcasterId}:${stream.streamId}`,
     };
 }
