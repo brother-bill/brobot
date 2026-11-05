@@ -487,15 +487,16 @@ export const envSchema = z
             optionalString(),
         ),
 
-        // Discord (optional: unset, the stream going live is not announced)
+        // Discord (optional: unset, the stream going live is not announced and
+        // the Twitch schedule is not synced to Discord's scheduled events)
 
-        // modules/twitch/go-live/go-live.service.ts
-        /** The discord-bot's in-cluster origin; its announce endpoint posts the go-live message. */
+        // modules/twitch/go-live/go-live.service.ts, modules/twitch/schedule/schedule-sync.service.ts
+        /** The discord-bot's in-cluster origin; its announce endpoint posts the go-live message and syncs the schedule's events. */
         DISCORD_BOT_URL: key(
             {
                 kind: 'topology',
                 description:
-                    'Origin of the discord-bot, without /api (in-cluster: http://discord-bot.discord.svc.cluster.local). With DISCORD_INTERNAL_API_TOKEN, the stream going live is announced on Discord. Unset or blank = no announcement.',
+                    'Origin of the discord-bot, without /api (in-cluster: http://discord-bot.discord.svc.cluster.local). With DISCORD_INTERNAL_API_TOKEN, the stream going live is announced on Discord and the Twitch schedule is synced to its scheduled events. Unset or blank = neither.',
             },
             optionalString().pipe(httpUrl().optional()),
         ),
@@ -504,7 +505,7 @@ export const envSchema = z
             {
                 kind: 'secret',
                 description:
-                    "Bearer secret brobot presents to the discord-bot's /api/internal/announce: the bot's INTERNAL_API_TOKEN. At least 32 characters. Required when DISCORD_BOT_URL is set.",
+                    "Bearer secret brobot presents to the discord-bot's /api/internal/announce (and /announce/edit, /announce/events): the bot's INTERNAL_API_TOKEN. At least 32 characters. Required when DISCORD_BOT_URL is set.",
             },
             optionalString().pipe(secret(32).optional()),
         ),
@@ -513,7 +514,7 @@ export const envSchema = z
             {
                 kind: 'plain',
                 description:
-                    "The discord-bot server slug (its servers/<slug>.yaml) the go-live announcement goes to; that file's announce.projects.brobot routes it.",
+                    "The discord-bot server slug (its servers/<slug>.yaml) the go-live announcement and the schedule's scheduled events go to; that file's announce.projects.brobot routes them.",
                 default: 'home',
             },
             z

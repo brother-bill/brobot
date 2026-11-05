@@ -7,6 +7,7 @@ import { EnvService } from '../../config/env.service';
 import { BotChatService } from './chat/bot-chat.service';
 import { GoLiveService } from './go-live/go-live.service';
 import { RedemptionsService } from './redeems/redemptions.service';
+import { ScheduleSyncService } from './schedule/schedule-sync.service';
 
 /**
  * Twurple types its router against express-serve-static-core 5; the app runs
@@ -39,11 +40,13 @@ export const EVENTSUB_PATH_PREFIX = '/twitch';
  *
  * Subscribed: channel-point redemptions (the Pokémon rewards and `Enable
  * Quacks`), incoming raids (a shout-out) and, when the Discord announcement
- * is configured ({@link GoLiveService}), the stream going live and ending.
+ * is configured ({@link GoLiveService}), the stream going live and ending,
+ * and the channel's title or category changing (`channel.update`, which
+ * resyncs the schedule's Discord events, {@link ScheduleSyncService}).
  * Webhook subscriptions use an app token; Twitch checks the streamer's own
  * grant (`channel:read:redemptions`, from the streamer OAuth flow) when it
- * creates the redemption one. `stream.online` and `stream.offline` need no
- * grant.
+ * creates the redemption one. `stream.online`, `stream.offline` and
+ * `channel.update` need no grant.
  */
 @Injectable()
 export class EventSubService {
@@ -56,6 +59,7 @@ export class EventSubService {
         private readonly redemptions: RedemptionsService,
         private readonly chat: BotChatService,
         private readonly goLive: GoLiveService,
+        private readonly schedule: ScheduleSyncService,
     ) {}
 
     /** Redemptions need the bot (chat to answer in, the streamer client to refund with), so both flags must be on. */
@@ -137,6 +141,11 @@ export class EventSubService {
             middleware.onStreamOffline(streamerId, event => {
                 void this.goLive.streamOffline(event.broadcasterId);
             });
+            if (this.schedule.enabled) {
+                middleware.onChannelUpdate(streamerId, () => {
+                    void this.schedule.sync();
+                });
+            }
             await this.resumeOnAir(apiClient, streamerId);
         } else {
             this.logger.log('Discord go-live announcement is off (DISCORD_BOT_URL unset)');
