@@ -480,6 +480,71 @@ describe('/api/internal/transfer (HTTP, database faked)', () => {
                 expect(pikachu.color).toBe('Brown');
             });
 
+            it('keeps the forme it came back as on a later return without species', async () => {
+                await giveBack({
+                    ...evolved,
+                    species: { nameId: 'raichualola', name: 'Raichu-Alola', dexNum: 26 },
+                }).expect(200);
+                await depart({ twitchId: OWNER, pmdRegisterId: REGISTER, nonce: 'n3' }).expect(200);
+                const res = await giveBack({
+                    twitchId: OWNER,
+                    pmdRegisterId: REGISTER,
+                    level: 60,
+                    nonce: 'n4',
+                }).expect(200);
+                expect(res.body.pokemon).toMatchObject({
+                    activeGame: 'brobot',
+                    level: 60,
+                    nameId: 'raichualola',
+                    name: 'Raichu-Alola',
+                    dexNum: 26,
+                    types: ['Electric', 'Psychic'],
+                });
+                expect(pikachu.color).toBe('Brown');
+            });
+
+            it('takes a gender forme', async () => {
+                Object.assign(pikachu, {
+                    name: 'Espurr',
+                    name_id: 'espurr',
+                    dex_num: 677,
+                    types: ['Psychic'],
+                    color: 'Gray',
+                });
+                const res = await giveBack({
+                    ...evolved,
+                    species: { nameId: 'meowsticf', name: 'Meowstic-F', dexNum: 678 },
+                    moves: ['psychic'],
+                }).expect(200);
+                expect(res.body.pokemon).toMatchObject({
+                    nameId: 'meowsticf',
+                    name: 'Meowstic-F',
+                    dexNum: 678,
+                    types: ['Psychic'],
+                });
+            });
+
+            it('carries a cosmetic forme into the evolution that has it', async () => {
+                Object.assign(pikachu, {
+                    name: 'Shellos-East',
+                    name_id: 'shelloseast',
+                    dex_num: 422,
+                    types: ['Water'],
+                    color: 'Purple',
+                });
+                const res = await giveBack({
+                    ...evolved,
+                    species: { nameId: 'gastrodoneast', name: 'Gastrodon-East', dexNum: 423 },
+                    moves: ['surf'],
+                }).expect(200);
+                expect(res.body.pokemon).toMatchObject({
+                    nameId: 'gastrodoneast',
+                    name: 'Gastrodon-East',
+                    dexNum: 423,
+                    types: ['Water', 'Ground'],
+                });
+            });
+
             it('replays the nonce without applying anything twice', async () => {
                 const first = await giveBack(evolved).expect(200);
                 const again = await giveBack(evolved).expect(200);
