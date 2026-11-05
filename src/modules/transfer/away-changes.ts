@@ -37,11 +37,36 @@ function columnsOf(species: Species): SpeciesColumns {
     };
 }
 
+/** Whether `species` lists `<base>-<forme>` among its cosmetic formes (Shellos: East). */
+function hasCosmeticForme(species: Species, forme: string): boolean {
+    return forme !== '' && (species.cosmeticFormes ?? []).includes(`${species.name}-${forme}`);
+}
+
+/**
+ * Whether `current` is the `prevo` chain's `step` on the way to `target`.
+ * Regional and gender formes carry their own chains (Raichu-Alola from
+ * Pikachu, Raticate-Alola from Rattata-Alola), so an exact id is enough. A
+ * cosmetic forme does not: `@pkmn` gives Gastrodon-East the prevo Shellos,
+ * never Shellos-East. So a cosmetic forme stands for its base species, and
+ * the forme carries over when the target's species has it (Shellos-East to
+ * Gastrodon-East, Burmy-Trash to Wormadam-Trash or to Mothim, which has
+ * none), as it does in the games.
+ */
+function isStep(current: Species, step: Species, target: Species): boolean {
+    if (current.id === step.id) return !hasCosmeticForme(step, target.forme);
+    if (current.baseSpecies !== step.name || !hasCosmeticForme(step, current.forme)) return false;
+    return (
+        target.forme === current.forme ||
+        !gen4.species.get(`${target.baseSpecies}-${current.forme}`).exists
+    );
+}
+
 /**
  * Whether `targetNameId` is a forward evolution of `currentNameId`: the
- * current species appears somewhere up the target's `prevo` chain. Only the
- * id is trusted; the name, dex number, types and colour are recomputed from
- * `@pkmn`, whatever the caller sent alongside it.
+ * current species appears somewhere up the target's `prevo` chain (see
+ * `isStep` for formes). Only the id is trusted; the name, dex number, types
+ * and colour are recomputed from `@pkmn`, whatever the caller sent alongside
+ * it.
  */
 export function evolutionOnReturn(currentNameId: string, targetNameId: string): EvolutionCheck {
     const current = gen4.species.get(currentNameId);
@@ -55,7 +80,7 @@ export function evolutionOnReturn(currentNameId: string, targetNameId: string): 
     for (let i = 0; i < MAX_PREVO_STEPS && step.prevo; i++) {
         step = gen4.species.get(step.prevo);
         if (!step.exists) break;
-        if (current.exists && step.id === current.id) {
+        if (current.exists && isStep(current, step, target)) {
             return { kind: 'evolve', columns: columnsOf(target) };
         }
     }
