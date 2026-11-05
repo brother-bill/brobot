@@ -8,9 +8,10 @@
  * The caller names a server, a project and a kind; the bot's
  * `servers/<slug>.yaml` (`announce.projects.brobot`) picks the channel, the
  * embed's colour and the role `ping: 'role'` reaches. brobot never names a
- * channel or a role. An edit (`/announce/edit`) addresses the post by the
- * server and the idempotency key it was posted under, so brobot keeps no
- * message ids.
+ * channel or a role, and never asks for the ping: that is an opt-in for an
+ * emergency (an outage, a security notice; owner, 2026-10-19). An edit
+ * (`/announce/edit`) addresses the post by the server and the idempotency key
+ * it was posted under, so brobot keeps no message ids.
  */
 
 export const DISCORD_ANNOUNCE_PATH = '/api/internal/announce';
@@ -32,7 +33,7 @@ export interface DiscordAnnounceRequest {
     url?: string;
     /** A public https image under the text. */
     image?: string;
-    /** `role` pings the project's `ping_role`. */
+    /** `none` (the default) pings nobody; `role` pings the project's `ping_role`, for an emergency only. */
     ping?: 'role' | 'none';
     /** Stable across retries: the bot posts once per key. Printable ASCII, no spaces, ≤ 200 characters. */
     idempotency_key: string;

@@ -66,7 +66,7 @@ function setup(
 }
 
 describe('goLiveAnnouncement', () => {
-    it('announces the title, category, preview and link, pinging the follower role, once per broadcast', () => {
+    it('announces the title, category, preview and link, pinging nobody, once per broadcast', () => {
         expect(goLiveAnnouncement(STREAM, CHANNEL, 'home')).toEqual({
             server: 'home',
             project: 'brobot',
@@ -75,7 +75,7 @@ describe('goLiveAnnouncement', () => {
             body: 'Playing **Phasmophobia** on Twitch.\n[Watch the stream](https://www.twitch.tv/trama)',
             url: 'https://www.twitch.tv/trama',
             image: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_trama-1280x720.jpg?stream=4242',
-            ping: 'role',
+            ping: 'none',
             idempotency_key: 'twitch:stream-live:1000:4242',
         });
     });
