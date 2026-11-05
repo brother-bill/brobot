@@ -9,10 +9,13 @@
  * `servers/<slug>.yaml` (`announce.projects.brobot`) picks the channel, the
  * embed's colour and the role `ping: 'role'` reaches. brobot never names a
  * channel or a role, and never asks for the ping: that is an opt-in for an
- * emergency (an outage, a security notice; owner, 2026-10-19).
+ * emergency (an outage, a security notice; owner, 2026-10-19). An edit
+ * (`/announce/edit`) addresses the post by the server and the idempotency key
+ * it was posted under, so brobot keeps no message ids.
  */
 
 export const DISCORD_ANNOUNCE_PATH = '/api/internal/announce';
+export const DISCORD_ANNOUNCE_EDIT_PATH = '/api/internal/announce/edit';
 
 /** Discord's limits on the embed fields the request fills. */
 export const DISCORD_ANNOUNCE_LIMITS = { title: 256, body: 4096 } as const;
@@ -45,9 +48,34 @@ export interface DiscordAnnounceResponse {
     crosspost_error?: string;
 }
 
-export type DiscordAnnounceResult =
-    | { ok: true; status: number; response: DiscordAnnounceResponse }
+/**
+ * What to change in the post made under `idempotency_key`: a field left out
+ * stays as posted; `null` removes the image. The bot remembers a key for 24
+ * hours, and not across its own restart (then 404 `unknown_post`).
+ */
+export interface DiscordAnnounceEditRequest {
+    server: string;
+    idempotency_key: string;
+    title?: string;
+    body?: string;
+    url?: string | null;
+    image?: string | null;
+    /** Replaces the kind in the footer (`Live now` → `Was live`), ≤ 64 characters. */
+    label?: string;
+}
+
+export interface DiscordAnnounceEditResponse {
+    message_id: string;
+    message_url: string;
+    channel_id: string;
+}
+
+type Result<T> =
+    | { ok: true; status: number; response: T }
     | { ok: false; status: number; error: string; message: string; retryable: boolean };
+
+export type DiscordAnnounceResult = Result<DiscordAnnounceResponse>;
+export type DiscordAnnounceEditResult = Result<DiscordAnnounceEditResponse>;
 
 /** The part of `fetch` the client uses; tests pass their own. */
 export type AnnounceFetch = (
@@ -73,8 +101,28 @@ export async function postDiscordAnnouncement(
     request: DiscordAnnounceRequest,
     options: DiscordAnnounceClientOptions,
 ): Promise<DiscordAnnounceResult> {
+    return call(DISCORD_ANNOUNCE_PATH, request, options);
+}
+
+/**
+ * Edits the post made under `request.idempotency_key`, answering as
+ * {@link postDiscordAnnouncement} does. An edit sets fields, so a retry is
+ * safe; a 404 `unknown_post` is final.
+ */
+export async function editDiscordAnnouncement(
+    request: DiscordAnnounceEditRequest,
+    options: DiscordAnnounceClientOptions,
+): Promise<DiscordAnnounceEditResult> {
+    return call(DISCORD_ANNOUNCE_EDIT_PATH, request, options);
+}
+
+async function call<T>(
+    path: string,
+    request: DiscordAnnounceRequest | DiscordAnnounceEditRequest,
+    options: DiscordAnnounceClientOptions,
+): Promise<Result<T>> {
     const send: AnnounceFetch = options.fetch ?? fetch;
-    const response = await send(`${options.baseUrl.replace(/\/+$/, '')}${DISCORD_ANNOUNCE_PATH}`, {
+    const response = await send(`${options.baseUrl.replace(/\/+$/, '')}${path}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${options.token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
@@ -82,7 +130,7 @@ export async function postDiscordAnnouncement(
     });
     const body: unknown = await response.json().catch(() => undefined);
     if (response.status === 200 || response.status === 201) {
-        return { ok: true, status: response.status, response: body as DiscordAnnounceResponse };
+        return { ok: true, status: response.status, response: body as T };
     }
     // A proxy's own error page is not the bot's `{ error, message }`.
     const known = isAnnounceError(body);
