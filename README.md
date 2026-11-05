@@ -29,7 +29,8 @@ src/
     auth/                   the three Twitch OAuth flows, JWT, guards, the Twitch token stores
     pokemon/                read-only HTTP for the admin site, and the game: generation, team rules, exclusivity, battles
     commands/               command list, chat-command parser, stored on/off switches
-    twitch/                 the bot: chat, EventSub, !pokemon, drops, redeems, votes, the two sockets
+    twitch/                 the bot: chat, EventSub, !pokemon, drops, redeems, votes, the two sockets,
+                            the Discord go-live post and schedule sync
     transfer/               /api/internal/transfer/* for api-time, the active_game state machine,
                             transfer_log (entities/), and the Prisma-dump import's mappers (import/)
     health/                 /api/health, /api/health/live
@@ -99,9 +100,9 @@ Streamlabs or Riot keys yet).
 
 | Discord (optional) | |
 |---|---|
-| `DISCORD_BOT_URL` | the discord-bot's origin, without `/api` (in-cluster `http://discord-bot.discord.svc.cluster.local`). Unset: going live is not announced. |
+| `DISCORD_BOT_URL` | the discord-bot's origin, without `/api` (in-cluster `http://discord-bot.discord.svc.cluster.local`). Unset: going live is not announced, and the schedule is not synced. |
 | `DISCORD_INTERNAL_API_TOKEN` | the bot's `INTERNAL_API_TOKEN`, ≥ 32 chars; required with `DISCORD_BOT_URL`, and refused without it |
-| `DISCORD_ANNOUNCE_SERVER` | default `home`: the bot's `servers/<slug>.yaml` the announcement goes to |
+| `DISCORD_ANNOUNCE_SERVER` | default `home`: the bot's `servers/<slug>.yaml` the announcement and the scheduled events go to |
 
 When the streamer goes live (EventSub `stream.online`, live broadcasts only,
 so not a rerun or premiere), brobot posts one announcement per broadcast to
@@ -125,10 +126,34 @@ a key for 24 hours and not across its own restart; a post it has forgotten
 env, the chart allowlist) and what is not built yet: the superproject's
 `guidelines/discord/twitch.md`.
 
+The streamer's Twitch schedule is mirrored into Discord Scheduled Events
+through `POST /api/internal/announce/events`, with the same env. brobot
+reads the schedule with the app token (Helix `GET /schedule`, no streamer
+grant) and lists the segments that start within the next 7 days and have
+not ended, skipping cancelled ones and those inside a vacation, at most 25.
+Each becomes an event keyed `twitch:segment:<id>`: named after the
+segment's title, else its category, else `<name> on Twitch` (≤ 100
+characters), described by the category and the channel link (≤ 900), at
+`https://twitch.tv/<login>`, with the category's box art as the cover, and
+ending four hours after the start when Twitch gives no end. One request
+carries the whole list for `source: twitch:<broadcaster id>`; the bot
+creates, updates and deletes its events of that source to match. A
+broadcaster with no schedule (Helix 404) sends an empty list, which deletes
+them; any other Helix failure sends nothing, since an empty list would
+delete every event. It syncs at startup, every 15 minutes, and on EventSub
+`channel.update` (subscribed beside `stream.online` when EventSub is on).
+Overlapping triggers run as one sync, with at most one queued behind it.
+A 5xx or an unreachable bot is retried as the go-live post is; a 4xx is
+logged and not retried: `422 no_route` means the bot's server file has not
+switched events on for brobot, and a `404` that names no server or project
+means the bot has not deployed the endpoint yet. Off with
+`TWITCH_BOT_ENABLED=false`, as the rest of the bot. The code is
+`src/modules/twitch/schedule/`.
+
 | Bot switches (optional) | |
 |---|---|
 | `TWITCH_BOT_ENABLED` | default `true`. `false` keeps chat, drops and reward handling offline; the API and sockets still serve. |
-| `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids, and to the stream going live and ending when `DISCORD_BOT_URL` is set. nginx must pass `/twitch/` to the API. |
+| `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids, and to the stream going live and ending and the channel's title or category changing when `DISCORD_BOT_URL` is set. nginx must pass `/twitch/` to the API. |
 | `OPENAI_MODEL` | default `gpt-4o-mini`; the model behind the `@bro_____bot` reply. |
 | `TWITCH_PREDICTION_TITLE` | default `Will Trama Win This Game?`, ≤ 45 chars: the streamer client's `create_prediction` hotkey. |
 | `TWITCH_PREDICTION_OUTCOMES` | default `Yes,No`: comma-separated, 2–10, each ≤ 25 chars. |

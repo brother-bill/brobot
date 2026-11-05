@@ -23,6 +23,8 @@ import { StreamerHotkeysService } from './hotkeys/streamer-hotkeys.service';
 import { HorrorRedeemsService } from './redeems/horror-redeems.service';
 import { HORROR_REWARD_API, HorrorRewardsService } from './redeems/horror-rewards.service';
 import { RedemptionsService } from './redeems/redemptions.service';
+import { SCHEDULE_HELIX, TwurpleScheduleHelix } from './schedule/schedule-helix';
+import { ScheduleSyncService } from './schedule/schedule-sync.service';
 import { StreamerApiService } from './streamer-api.service';
 import { StreamerGateway } from './streamer.gateway';
 import { UiLinks } from './ui-links';
@@ -32,8 +34,8 @@ import { VotesService } from './votes/votes.service';
  * The bot: Twurple chat and EventSub, the `!pokemon` family, drops,
  * channel-point redeems, `!chatban` / `!voiceban` and the streamer's hotkeys
  * (marker, prediction, commercial) over `/api/ashketchum`,
- * the stream overlay socket, chess, the AI reply and the Discord go-live
- * announcement.
+ * the stream overlay socket, chess, the AI reply, the Discord go-live
+ * announcement and the Twitch schedule's Discord events.
  *
  * Credentials come from AuthModule's token stores, switches from
  * CommandsModule, and the game from PokemonModule. With
@@ -72,6 +74,8 @@ import { VotesService } from './votes/votes.service';
         RedemptionsService,
         HorrorRedeemsService,
         GoLiveService,
+        { provide: SCHEDULE_HELIX, useClass: TwurpleScheduleHelix },
+        ScheduleSyncService,
         EventSubService,
     ],
     exports: [StreamerGateway, BotChatService, EventSubService],

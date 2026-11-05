@@ -4,6 +4,8 @@ import { EventSubService, EVENTSUB_PATH_PREFIX, type NestExpressInstance } from 
 import { GoLiveService, type ChannelInfo, type StreamOnline } from './go-live/go-live.service';
 import type { Redemption } from './redeems/redemption';
 import type { RedemptionsService } from './redeems/redemptions.service';
+import type { ScheduleHelix } from './schedule/schedule-helix';
+import { ScheduleSyncService } from './schedule/schedule-sync.service';
 
 type Handler = (event: Record<string, unknown>) => void;
 
@@ -67,6 +69,10 @@ vi.mock('@twurple/eventsub-http', () => ({
         onStreamOffline(user: string, handler: Handler) {
             this.record.subscriptions.push({ kind: 'stream-offline', user, handler });
         }
+
+        onChannelUpdate(user: string, handler: Handler) {
+            this.record.subscriptions.push({ kind: 'channel-update', user, handler });
+        }
     },
 }));
 
@@ -81,8 +87,11 @@ function setup(env: Record<string, string>) {
     goLive.streamOnline = async stream => void live.push(stream);
     goLive.streamOffline = async broadcasterId => void ended.push(broadcasterId);
     goLive.resume = (stream, info) => void resumed.push([stream, info]);
-    const service = new EventSubService(testEnvService(env), redemptions as unknown as RedemptionsService, chat, goLive);
-    return { service, said, handled, live, ended, resumed };
+    const schedule = new ScheduleSyncService(testEnvService(env), {} as ScheduleHelix);
+    let syncs = 0;
+    schedule.sync = async () => void syncs++;
+    const service = new EventSubService(testEnvService(env), redemptions as unknown as RedemptionsService, chat, goLive, schedule);
+    return { service, said, handled, live, ended, resumed, syncs: () => syncs };
 }
 
 describe('EventSubService', () => {
@@ -166,6 +175,18 @@ describe('EventSubService', () => {
         expect(ended).toEqual(['1000']);
         // Not on air at startup: nothing to resume.
         expect(resumed).toEqual([]);
+    });
+
+    it('resyncs the schedule’s Discord events when the channel’s title or category changes', async () => {
+        const { service, syncs } = setup({ TWITCH_EVENTSUB_ENABLED: 'true', TWITCH_BOT_ENABLED: 'true', ...discord });
+        service.apply({} as NestExpressInstance);
+        await service.subscribe();
+
+        const update = twurple.middleware?.subscriptions.find(sub => sub.kind === 'channel-update');
+        expect(update?.user).toBe('1000');
+        update?.handler({ broadcasterId: '1000', streamTitle: 'Horror night', categoryName: 'Phasmophobia' });
+        update?.handler({ broadcasterId: '1000', streamTitle: 'Horror night 2', categoryName: 'Phasmophobia' });
+        expect(syncs()).toBe(2);
     });
 
     it('remembers a stream already on air at startup, so its end is marked', async () => {

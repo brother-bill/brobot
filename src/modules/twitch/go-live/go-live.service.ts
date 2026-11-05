@@ -7,6 +7,7 @@ import {
     DISCORD_ANNOUNCE_LIMITS,
     editDiscordAnnouncement,
     postDiscordAnnouncement,
+    sendWithRetries,
 } from './discord-announce';
 
 /** What EventSub's `stream.online` says, plus the stream's type (only `live` is announced). */
@@ -42,15 +43,6 @@ interface OnAir {
     readonly stream: StreamOnline;
     /** Settles once the go-live post is in, or has been given up. */
     readonly announced: Promise<{ info: ChannelInfo | null; posted: boolean }>;
-}
-
-/** A refused or unreachable call to the bot. */
-interface Failure {
-    ok: false;
-    status: number;
-    error: string;
-    message: string;
-    retryable: boolean;
 }
 
 /**
@@ -144,8 +136,10 @@ export class GoLiveService {
             this.env.get('DISCORD_ANNOUNCE_SERVER'),
             new Date(),
         );
-        const result = await this.retrying('"Was live" edit', () =>
-            editDiscordAnnouncement(edit, this.options()),
+        const result = await sendWithRetries(
+            '"Was live" edit',
+            () => editDiscordAnnouncement(edit, this.options()),
+            this.retries,
         );
         if (result.ok)
             this.logger.log(`Go-live post marked "was live": ${result.response.message_url}`);
@@ -162,8 +156,10 @@ export class GoLiveService {
             return null;
         });
         const request = goLiveAnnouncement(stream, info, this.env.get('DISCORD_ANNOUNCE_SERVER'));
-        const result = await this.retrying('Go-live announcement', () =>
-            postDiscordAnnouncement(request, this.options()),
+        const result = await sendWithRetries(
+            'Go-live announcement',
+            () => postDiscordAnnouncement(request, this.options()),
+            this.retries,
         );
         if (result.ok) {
             const { response } = result;
@@ -179,39 +175,8 @@ export class GoLiveService {
         return { info, posted: result.ok };
     }
 
-    /**
-     * Sends until the bot answers, retrying a 5xx or an unreachable bot after
-     * each of {@link GO_LIVE_RETRY_DELAYS_MS}; logs a failure, and returns the
-     * last answer.
-     */
-    private async retrying<T extends { ok: true } | Failure>(
-        what: string,
-        send: () => Promise<T>,
-    ): Promise<T | Failure> {
-        for (let attempt = 0; ; attempt++) {
-            const result: T | Failure = await send().catch(
-                (error: unknown): Failure => ({
-                    ok: false,
-                    status: 0,
-                    error: 'unreachable',
-                    message: describe(error),
-                    retryable: true,
-                }),
-            );
-            if (result.ok) return result;
-            if (!result.retryable || attempt >= GO_LIVE_RETRY_DELAYS_MS.length) {
-                this.logger.error(
-                    `${what} failed${result.retryable ? ` after ${attempt + 1} attempts` : ''}: ` +
-                        `${result.status} ${result.error}: ${result.message}`,
-                );
-                return result;
-            }
-            const delay = GO_LIVE_RETRY_DELAYS_MS[attempt];
-            this.logger.warn(
-                `${what}: ${result.status} ${result.error}, retrying in ${delay / 1000}s`,
-            );
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
+    private get retries() {
+        return { delays: GO_LIVE_RETRY_DELAYS_MS, logger: this.logger };
     }
 
     private options() {
