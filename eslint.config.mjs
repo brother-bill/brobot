@@ -4,13 +4,6 @@ import baseConfig from '../../eslint.config.mjs';
 export default tseslint.config(
     ...baseConfig,
 
-    {
-        files: ['**/*.ts'],
-        rules: {
-            '@typescript-eslint/interface-name-prefix': 'off',
-        },
-    },
-
     // Same relaxation api-time applies to test code.
     {
         files: [
