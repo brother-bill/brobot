@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
     eventSub.apply(app.getHttpAdapter().getInstance());
 
     if (env.get('RUN_MIGRATIONS')) {
-        const applied = await app.get(MikroORM).getMigrator().up();
+        const applied = await app.get(MikroORM).migrator.up();
         logger.log(`Migrations applied: ${applied.length === 0 ? 'none pending' : applied.map(m => m.name).join(', ')}`);
     } else {
         logger.log('RUN_MIGRATIONS=false — skipping migrations');

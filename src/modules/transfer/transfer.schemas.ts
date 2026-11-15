@@ -26,13 +26,13 @@ const pkmnIdSchema = z
     .regex(/^[a-z0-9]+$/, 'must be a @pkmn id')
     .max(40);
 
-export const pokemonIdParamSchema = z.string().uuid('must be a brobot Pokémon id');
+export const pokemonIdParamSchema = z.uuid({ error: 'must be a brobot Pokémon id' });
 
 export const twitchIdQuerySchema = z.object({ twitchId: twitchIdSchema });
 
 export const departBodySchema = z.object({
     twitchId: twitchIdSchema,
-    pmdRegisterId: z.string().uuid(),
+    pmdRegisterId: z.uuid(),
     nonce: nonceSchema,
 });
 export type DepartBody = z.infer<typeof departBodySchema>;
@@ -41,7 +41,7 @@ export const returnBodySchema = z
     .object({
         twitchId: twitchIdSchema,
         /** api-time (A1) sends the register row it is returning from; checked against the row when present. */
-        pmdRegisterId: z.string().uuid().optional(),
+        pmdRegisterId: z.uuid().optional(),
         /** PMD's level for it. `level` is the pmd-contracts spelling, `pmdLevel` the ticket's; send one. */
         pmdLevel: pmdLevelSchema.optional(),
         level: pmdLevelSchema.optional(),
@@ -62,14 +62,14 @@ export const returnBodySchema = z
         moves: z.array(pkmnIdSchema).min(1).max(4).optional(),
     })
     .refine(body => body.pmdLevel !== undefined || body.level !== undefined, {
-        message: 'pmdLevel (or level) is required',
+        error: 'pmdLevel (or level) is required',
         path: ['pmdLevel'],
     })
     .refine(
         body =>
             body.pmdLevel === undefined || body.level === undefined || body.pmdLevel === body.level,
         {
-            message: 'pmdLevel and level disagree',
+            error: 'pmdLevel and level disagree',
             path: ['level'],
         },
     )

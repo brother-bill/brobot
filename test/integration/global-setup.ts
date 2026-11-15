@@ -51,9 +51,9 @@ export async function setup(): Promise<void> {
         logger: () => undefined,
     });
     try {
-        const pending = await orm.getMigrator().getPendingMigrations();
+        const pending = await orm.migrator.getPendingMigrations();
         if (pending.length > 0) {
-            await orm.getMigrator().up();
+            await orm.migrator.up();
         } else {
             await orm.schema.createSchema();
         }
