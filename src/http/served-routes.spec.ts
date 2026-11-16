@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { MikroORM } from '@mikro-orm/core';
@@ -33,7 +33,15 @@ import { EVENTSUB_PATH_PREFIX } from '../modules/twitch/eventsub.service';
 import { OVERLAY_SOCKET_PATH } from '../modules/twitch/overlay-events';
 import { STREAMER_SOCKET_PATH } from '../modules/twitch/streamer-events';
 import { brobotServers } from './security';
-import { appControllers, appGlobalGuards, servedRoutes } from './served-routes';
+import {
+    appControllers,
+    appGlobalGuards,
+    renderServedRoutes,
+    SERVED_ROUTES_COMMAND,
+    SERVED_ROUTES_FILE,
+    SERVED_ROUTES_WRITE_ENV,
+    servedRoutes,
+} from './served-routes';
 import type { GuardFacts, HandlerFacts, ServedRoutes } from './served-routes';
 
 /**
@@ -137,6 +145,8 @@ const SERVED_ROUTES_SCHEMA = resolve(
     SUPERPROJECT,
     'libs/contracts/scripts/served-routes.schema.json',
 );
+/** The committed file singularity's contract-check.yml checks (brobot's .github/workflows/contract.yml). */
+const SERVED_ROUTES_PATH = resolve(__dirname, '../..', SERVED_ROUTES_FILE);
 
 // ── the document ────────────────────────────────────────────────────────────
 
@@ -389,6 +399,21 @@ describe('openapi.json against what brobot serves', () => {
             );
             expect(validate(served), schemaAjv.errorsText(validate.errors)).toBe(true);
             expect(served.routes).toHaveLength(24);
+        });
+
+        it(`${SERVED_ROUTES_FILE} is what Nest serves — run \`${SERVED_ROUTES_COMMAND}\` in apps/brobot and commit the result`, () => {
+            const rendered = renderServedRoutes(served);
+            if (process.env[SERVED_ROUTES_WRITE_ENV] === '1') {
+                writeFileSync(SERVED_ROUTES_PATH, rendered);
+            }
+            const committed = existsSync(SERVED_ROUTES_PATH)
+                ? readFileSync(SERVED_ROUTES_PATH, 'utf8')
+                : '';
+            expect(
+                committed,
+                `${SERVED_ROUTES_FILE} is stale: run \`${SERVED_ROUTES_COMMAND}\` in apps/brobot and commit the result`,
+            ).toBe(rendered);
+            expect(checker.validateServedRoutes(JSON.parse(committed))).toEqual([]);
         });
 
         it('reads query and path names from the ZodValidationPipe, never the raw query', () => {

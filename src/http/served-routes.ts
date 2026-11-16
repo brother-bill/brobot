@@ -273,3 +273,25 @@ export function appGlobalGuards(app: INestApplication): Type<CanActivate>[] {
     }
     return guards;
 }
+
+/** Path of the committed served-routes/v1 file, relative to the brobot root. */
+export const SERVED_ROUTES_FILE = 'served-routes.json';
+
+/** The command that rewrites {@link SERVED_ROUTES_FILE}, run from apps/brobot. */
+export const SERVED_ROUTES_COMMAND = 'pnpm run served-routes';
+
+/** Set by {@link SERVED_ROUTES_COMMAND}: the spec writes the file instead of comparing it. */
+export const SERVED_ROUTES_WRITE_ENV = 'BROBOT_WRITE_SERVED_ROUTES';
+
+/**
+ * The committed `served-routes.json`: routes sorted by path then method (so
+ * moving a module in AppModule leaves the file alone), two-space indent, a
+ * final newline. `served-routes.spec.ts` fails when the committed file and
+ * this disagree; singularity's contract-check.yml reads the committed file.
+ */
+export function renderServedRoutes(served: ServedRoutes): string {
+    const routes = [...served.routes].sort(
+        (a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method),
+    );
+    return `${JSON.stringify({ ...served, routes }, null, 2)}\n`;
+}

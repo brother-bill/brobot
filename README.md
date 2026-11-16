@@ -38,8 +38,9 @@ src/
     health/                 /api/health, /api/health/live
 scripts/                    operator scripts (import-prisma-dump.ts) and the openapi / env:schema exports
 openapi.json                the HTTP contract, generated: `pnpm run openapi`
+served-routes.json          what Nest serves, as served-routes/v1, generated: `pnpm run served-routes`
 contract-lint-ignore.txt    its lint exceptions under singularity's ruleset: `pnpm run contract:lint`
-deploy/                     where the deploy lives (it is not here)
+deploy/                     where the deploy lives (it is not here); github/ stages this repo's CI
 test/                       shared test helpers, integration global setup
 ```
 
@@ -75,6 +76,7 @@ pnpm exec tsc --noEmit -p tsconfig.spec.json
 pnpm run test               # unit, including a full AppModule boot with the DB switched off
 pnpm run test:integration   # real Postgres via testcontainers (needs Docker)
 pnpm run contract:lint      # openapi.json under singularity's contract ruleset (from the superproject)
+pnpm run served-routes      # rewrite served-routes.json after a route change (the parity spec checks it)
 ```
 
 ## Environment
@@ -243,6 +245,18 @@ table, so a handler that starts answering a new status is listed there (the
 spec fails on an answered status the table does not list). The EventSub
 webhook and the two sockets are pinned there as outside the document, each
 with its reason.
+
+The served routes are committed as [`served-routes.json`](served-routes.json)
+(routes sorted by path, then method), and the spec fails when the file is not
+what Nest serves: after a route change, run `pnpm run served-routes` (the spec
+with `BROBOT_WRITE_SERVED_ROUTES=1`, which writes the file before comparing)
+and commit the result. The file is what CI checks: `.github/workflows/contract.yml`
+(staged as [`deploy/github/contract.yml`](deploy/github/contract.yml) until it
+is installed) calls singularity's `contract-check.yml` on a pull request that
+touches `openapi.json`, `served-routes.json`, `contract-lint-ignore.txt` or
+`src/http/`, with the lint exceptions read from `contract-lint-ignore.txt`.
+Committed rather than uploaded because brobot's tests run only inside the
+superproject (its workspace libraries), never in this repository's CI.
 
 What the document does not say:
 

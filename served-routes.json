@@ -1,0 +1,399 @@
+{
+  "format": "served-routes/v1",
+  "service": "brobot",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": true,
+      "responses": [
+        "200",
+        "400",
+        "401",
+        "429"
+      ],
+      "source": "AuthRefreshAliasController.refresh"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/twitch/bot",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "302",
+        "429"
+      ],
+      "source": "AuthController.bot"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/twitch/bot/callback",
+      "pathParams": [],
+      "query": [
+        "code",
+        "error",
+        "state"
+      ],
+      "headers": [
+        "accept"
+      ],
+      "body": false,
+      "responses": [
+        "200",
+        "302",
+        "400",
+        "401",
+        "403",
+        "429",
+        "502"
+      ],
+      "source": "AuthController.botCallback"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/twitch/callback",
+      "pathParams": [],
+      "query": [
+        "code",
+        "error",
+        "state"
+      ],
+      "headers": [
+        "accept"
+      ],
+      "body": false,
+      "responses": [
+        "200",
+        "302",
+        "400",
+        "401",
+        "429",
+        "502"
+      ],
+      "source": "AuthController.callback"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/twitch/login",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "302",
+        "429"
+      ],
+      "source": "AuthController.login"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/twitch/logout",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "204",
+        "429"
+      ],
+      "source": "AuthController.logout"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/twitch/refresh",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": true,
+      "responses": [
+        "200",
+        "400",
+        "401",
+        "429"
+      ],
+      "source": "AuthController.refresh"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/twitch/status",
+      "pathParams": [],
+      "query": [],
+      "headers": [
+        "authorization"
+      ],
+      "body": false,
+      "responses": [
+        "200",
+        "401",
+        "429"
+      ],
+      "source": "AuthController.status"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/twitch/streamer",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "302",
+        "429"
+      ],
+      "source": "AuthController.streamer"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/twitch/streamer/callback",
+      "pathParams": [],
+      "query": [
+        "code",
+        "error",
+        "state"
+      ],
+      "headers": [
+        "accept"
+      ],
+      "body": false,
+      "responses": [
+        "200",
+        "302",
+        "400",
+        "401",
+        "403",
+        "429",
+        "502"
+      ],
+      "source": "AuthController.streamerCallback"
+    },
+    {
+      "method": "GET",
+      "path": "/commands",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "200",
+        "429"
+      ],
+      "source": "CommandsController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/commands",
+      "pathParams": [],
+      "query": [],
+      "headers": [
+        "authorization"
+      ],
+      "body": true,
+      "responses": [
+        "201",
+        "400",
+        "401",
+        "403",
+        "404",
+        "429"
+      ],
+      "source": "CommandsController.setEnabled"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "200"
+      ],
+      "source": "HealthController.health"
+    },
+    {
+      "method": "GET",
+      "path": "/health/live",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "200"
+      ],
+      "source": "HealthController.live"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/horror/mode",
+      "pathParams": [],
+      "query": [],
+      "headers": [
+        "authorization"
+      ],
+      "body": false,
+      "responses": [
+        "200",
+        "401",
+        "429"
+      ],
+      "source": "HorrorModeController.get"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/horror/mode",
+      "pathParams": [],
+      "query": [],
+      "headers": [
+        "authorization"
+      ],
+      "body": true,
+      "responses": [
+        "200",
+        "400",
+        "401",
+        "429"
+      ],
+      "source": "HorrorModeController.set"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/transfer/pokemon",
+      "pathParams": [],
+      "query": [
+        "twitchId"
+      ],
+      "headers": [
+        "authorization"
+      ],
+      "body": false,
+      "responses": [
+        "200",
+        "400",
+        "401"
+      ],
+      "source": "TransferController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/transfer/pokemon/{id}/depart",
+      "pathParams": [
+        "id"
+      ],
+      "query": [],
+      "headers": [
+        "authorization"
+      ],
+      "body": true,
+      "responses": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409"
+      ],
+      "source": "TransferController.depart"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/transfer/pokemon/{id}/return",
+      "pathParams": [
+        "id"
+      ],
+      "query": [],
+      "headers": [
+        "authorization"
+      ],
+      "body": true,
+      "responses": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409"
+      ],
+      "source": "TransferController.return"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/transfer/users/{twitchId}/pokemon",
+      "pathParams": [
+        "twitchId"
+      ],
+      "query": [],
+      "headers": [
+        "authorization"
+      ],
+      "body": false,
+      "responses": [
+        "200",
+        "400",
+        "401"
+      ],
+      "source": "TransferController.listByPath"
+    },
+    {
+      "method": "GET",
+      "path": "/pokemon/battle-outcome",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "200",
+        "429"
+      ],
+      "source": "PokemonController.battleOutcome"
+    },
+    {
+      "method": "GET",
+      "path": "/pokemon/leaderboard",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "200",
+        "429"
+      ],
+      "source": "PokemonController.leaderboard"
+    },
+    {
+      "method": "GET",
+      "path": "/pokemon/team-battle-outcome",
+      "pathParams": [],
+      "query": [],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "200",
+        "429"
+      ],
+      "source": "PokemonController.teamBattleOutcome"
+    },
+    {
+      "method": "GET",
+      "path": "/pokemon/teams",
+      "pathParams": [],
+      "query": [
+        "login"
+      ],
+      "headers": [],
+      "body": false,
+      "responses": [
+        "200",
+        "400",
+        "404",
+        "429",
+        "502"
+      ],
+      "source": "PokemonController.team"
+    }
+  ]
+}
