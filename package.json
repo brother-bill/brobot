@@ -16,6 +16,7 @@
         "db:schema:dev": "mikro-orm schema:update --run",
         "env:schema": "ts-node --transpile-only -P tsconfig.app.json scripts/export-env-schema.ts",
         "openapi": "ts-node --transpile-only -P tsconfig.app.json scripts/export-openapi.ts",
+        "contract:lint": "REDOCLY=../../libs/contracts/node_modules/.bin/redocly node ../../libs/contracts/scripts/contract-lint.mjs --document openapi.json --lint-ignore-file contract-lint-ignore.txt",
         "config:pull-dev": "ts-node --transpile-only -P tsconfig.app.json scripts/config-pull-dev.ts",
         "import:prisma-dump": "ts-node --transpile-only -P tsconfig.app.json scripts/import-prisma-dump.ts"
     },

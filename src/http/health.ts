@@ -45,6 +45,7 @@ export const getHealth = defineRoute({
     path: '/health',
     tags: ['Health'],
     summary: 'Health and build provenance',
+    description: 'The process answers, with the commit and build time of the running image.',
     responses: { 200: { description: 'Healthy', body: BrobotHealthResponse } },
 });
 
