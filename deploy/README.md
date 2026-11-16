@@ -1,6 +1,7 @@
 # brobot deploy
 
-Nothing deploys from this directory. It once waited for ticket **I1** of
+Nothing deploys from this directory. `github/` stages brobot's own CI for
+`.github/workflows/` (the contract check), with the owner's install steps. It once waited for ticket **I1** of
 `guidelines/brobot/migration-plan.md` (Terraform, compose, nginx,
 `materialize.sh`); the k3s chart replaced that plan before it shipped.
 

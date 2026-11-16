@@ -1,0 +1,92 @@
+name: Contract
+
+# brobot's HTTP contract under singularity's contract checks
+# (libs/contracts/docs/publishing-a-contract.md there, §6): on a pull request
+# that touches the document, the served routes, the lint exceptions or
+# src/http, call singularity's reusable contract-check.yml at a pinned commit.
+# It lints openapi.json with singularity's ruleset plus only
+# contract-lint-ignore.txt's entries, and checks the committed
+# served-routes.json against it.
+#
+# served-routes.json is committed, not uploaded: brobot's tests need the
+# superproject's workspace libraries, so they run there (pnpm test in
+# apps/brobot), and src/http/served-routes.spec.ts fails when the committed
+# file is not what Nest serves (`pnpm run served-routes` rewrites it). So no
+# test job runs here and served-routes-artifact stays empty.
+#
+# Pins: the `uses:` ref and `singularity-ref` are the same full singularity
+# SHA, a commit whose .github/workflows/ has contract-check.yml (a reusable
+# workflow cannot read the ref it was called at). Moving it is how a change to
+# singularity's ruleset or checker reaches brobot.
+#
+# Needs (deploy/github/README.md): singularity's Actions access setting open
+# to the owner's repositories, and this repository's secret
+# SINGULARITY_CONTRACTS_TOKEN, a fine-grained token with Contents: read on
+# singularity alone.
+#
+# Guards: read-only token, unpersisted checkout, pinned actions, and the fork
+# guard on the one job here (contract-check.yml carries its own). Builds,
+# pushes and publishes nothing; no dispatch trigger. Cost: a few seconds, then
+# contract-check.yml's minute.
+
+on:
+    pull_request:
+        paths:
+            - openapi.json
+            - served-routes.json
+            - contract-lint-ignore.txt
+            - src/http/**
+            - .github/workflows/contract.yml
+
+permissions:
+    contents: read
+
+concurrency:
+    group: contract-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    # contract-check.yml takes the lint exceptions as an input, not a file:
+    # hand it contract-lint-ignore.txt as it is committed, comments included
+    # (its parser is the one `pnpm run contract:lint` reads the file with).
+    lint-ignore:
+        name: Read contract-lint-ignore.txt
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+        timeout-minutes: 5
+        outputs:
+            entries: ${{ steps.read.outputs.entries }}
+        steps:
+            - name: Checkout the lint exceptions
+              uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+              with:
+                  persist-credentials: false
+                  sparse-checkout-cone-mode: false
+                  sparse-checkout: contract-lint-ignore.txt
+
+            - name: Hand them on as an output
+              id: read
+              run: |
+                  set -euo pipefail
+                  delimiter="CONTRACT_LINT_IGNORE_$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+                  if grep -qx "$delimiter" contract-lint-ignore.txt; then
+                      echo "::error::contract-lint-ignore.txt contains the output delimiter"
+                      exit 1
+                  fi
+                  {
+                      echo "entries<<$delimiter"
+                      cat contract-lint-ignore.txt
+                      echo "$delimiter"
+                  } >> "$GITHUB_OUTPUT"
+
+    contract:
+        needs: lint-ignore
+        uses: brother-bill/singularity/.github/workflows/contract-check.yml@SINGULARITY_CONTRACT_CHECK_SHA
+        with:
+            name: brobot
+            document: openapi.json
+            served-routes: served-routes.json
+            singularity-ref: SINGULARITY_CONTRACT_CHECK_SHA
+            lint-ignore: ${{ needs.lint-ignore.outputs.entries }}
+        secrets:
+            singularity-token: ${{ secrets.SINGULARITY_CONTRACTS_TOKEN }}
