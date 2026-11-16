@@ -8,11 +8,18 @@
     // first, and fail with the recovery command when the dist is missing or
     // stale: `pnpm exec turbo run build --filter=@singularity/brobot`
     // builds it (turbo's `build` depends on ^build).
+    //
+    // @singularity/pmd-contracts is a devDependency, read by specs only
+    // (transfer-wire.spec.ts), so it stays mapped to its source: the guard
+    // then does not require its dist, which the image never builds
+    // (Dockerfile.brobot.prod), and an import of it from src/ fails this
+    // build with TS6059 (outside rootDir) instead of shipping without it.
     "extends": "./tsconfig.app.json",
     "compilerOptions": {
         "rootDir": "./src",
         "paths": {
-            "@singularity/http-contract": ["libs/http-contract/dist/index.d.ts"]
+            "@singularity/http-contract": ["libs/http-contract/dist/index.d.ts"],
+            "@singularity/pmd-contracts": ["libs/pmd-contracts/src/index.ts"]
         }
     }
 }
