@@ -219,6 +219,21 @@ does not compile. `brobotDocument()` builds the document, and
 `src/http/document.spec.ts` holds it equal to what Nest serves: the same
 operations at the same statuses. A route change is made there first.
 
+`src/http/served-routes.spec.ts` holds the document to singularity's contract
+checks (`libs/contracts/docs/publishing-a-contract.md`). It boots the real
+`AppModule` (database and Twitch faked), reads what Nest serves into
+`served-routes/v1` (`src/http/served-routes.ts`: query and path names from
+each `ZodValidationPipe`'s schema), and runs the shared checker
+(`libs/contracts/scripts/served-routes-check.mjs`) against `openapi.json`,
+failing on any finding. It then validates every response it gets, success and
+error, against the document's schema for that status (Ajv 2020), calling each
+operation at least once. Metadata cannot see what a handler or its service
+throws, or what it reads through `@Req()`; those are the spec's `HANDLERS`
+table, so a handler that starts answering a new status is listed there (the
+spec fails on an answered status the table does not list). The EventSub
+webhook and the two sockets are pinned there as outside the document, each
+with its reason.
+
 What the document does not say:
 
 - **Errors** are Nest's standard `{ statusCode, message, error }` (`error` is
