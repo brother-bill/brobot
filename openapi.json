@@ -940,6 +940,7 @@
         },
         "/auth/twitch/bot": {
             "get": {
+                "description": "A browser navigation, never a fetch: sets a fresh `state` as the\n`brobot_oauth_bot` cookie (10 minutes) and redirects to Twitch with\n`force_verify`, so the account is chosen rather than reused. Twitch\nsends the browser on to `/auth/twitch/bot/callback`.\n",
                 "operationId": "twitchBotLink",
                 "responses": {
                     "302": {
@@ -1203,6 +1204,7 @@
         },
         "/auth/twitch/login": {
             "get": {
+                "description": "A browser navigation, never a fetch: sets a fresh `state` as the\n`brobot_oauth_viewer` cookie (10 minutes) and redirects to Twitch,\nwhich sends the browser on to `/auth/twitch/callback`.\n",
                 "operationId": "twitchLogin",
                 "responses": {
                     "302": {
@@ -1323,6 +1325,7 @@
         },
         "/auth/twitch/status": {
             "get": {
+                "description": "The caller's Twitch identity, roles and granted scopes, read from the database on every call.",
                 "operationId": "getAuthStatus",
                 "responses": {
                     "200": {
@@ -1372,6 +1375,7 @@
         },
         "/auth/twitch/streamer": {
             "get": {
+                "description": "A browser navigation, never a fetch: sets a fresh `state` as the\n`brobot_oauth_streamer` cookie (10 minutes) and redirects to Twitch\nwith `force_verify`, so the account is chosen rather than reused.\nTwitch sends the browser on to `/auth/twitch/streamer/callback`.\n",
                 "operationId": "twitchStreamerLink",
                 "responses": {
                     "302": {
@@ -1520,6 +1524,7 @@
         },
         "/commands": {
             "get": {
+                "description": "Public: the commands page needs no sign-in. Read from memory, not the database.",
                 "operationId": "listCommands",
                 "responses": {
                     "200": {
@@ -1642,6 +1647,7 @@
         },
         "/health": {
             "get": {
+                "description": "The process answers, with the commit and build time of the running image.",
                 "operationId": "getHealth",
                 "responses": {
                     "200": {
@@ -1685,6 +1691,7 @@
         },
         "/internal/horror/mode": {
             "get": {
+                "description": "The mode chat is gated by now, from memory: `off` when the stored mode could not be read at boot.",
                 "operationId": "getHorrorMode",
                 "responses": {
                     "200": {
@@ -1855,6 +1862,7 @@
         },
         "/internal/transfer/pokemon/{id}/depart": {
             "post": {
+                "description": "It leaves its team slot: an away Pokémon holds none. Already in\npmd-online under the same `pmdRegisterId` is a 200 with no write;\nunder another, `pokemon_away` (409).\n",
                 "operationId": "departPokemon",
                 "parameters": [
                     {
@@ -2111,6 +2119,7 @@
         },
         "/pokemon/battle-outcome": {
             "get": {
+                "description": "The log of the most recent one-on-one battle in chat (`!pokemon battle`).",
                 "operationId": "getBattleOutcome",
                 "responses": {
                     "200": {
@@ -2177,6 +2186,7 @@
         },
         "/pokemon/team-battle-outcome": {
             "get": {
+                "description": "The log of the most recent team battle in chat (`!pokemon teambattle`).",
                 "operationId": "getTeamBattleOutcome",
                 "responses": {
                     "200": {

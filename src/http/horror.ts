@@ -38,6 +38,7 @@ export const getHorrorMode = defineRoute({
     tags: ['Horror'],
     security: horrorSecurity,
     summary: 'The SLEEP TIGHT mode',
+    description: 'The mode chat is gated by now, from memory: `off` when the stored mode could not be read at boot.',
     responses: {
         200: { description: 'The mode', body: BrobotHorrorModeResponse },
         401: unauthorized,

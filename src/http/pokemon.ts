@@ -128,6 +128,7 @@ export const getBattleOutcome = defineRoute({
     path: '/pokemon/battle-outcome',
     tags: ['Pokemon'],
     summary: 'The last one-on-one battle',
+    description: 'The log of the most recent one-on-one battle in chat (`!pokemon battle`).',
     responses: {
         200: { description: 'The battle log', body: BrobotBattleOutcome },
         429: tooManyRequests,
@@ -140,6 +141,7 @@ export const getTeamBattleOutcome = defineRoute({
     path: '/pokemon/team-battle-outcome',
     tags: ['Pokemon'],
     summary: 'The last team battle',
+    description: 'The log of the most recent team battle in chat (`!pokemon teambattle`).',
     responses: {
         200: { description: 'The battle log', body: BrobotBattleOutcome },
         429: tooManyRequests,

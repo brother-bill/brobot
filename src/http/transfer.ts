@@ -245,6 +245,11 @@ export const departPokemon = defineRoute({
     tags: ['Transfer'],
     security: transferSecurity,
     summary: 'Send a Pokémon to pmd-online',
+    description: doc`
+        It leaves its team slot: an away Pokémon holds none. Already in
+        pmd-online under the same \`pmdRegisterId\` is a 200 with no write;
+        under another, \`pokemon_away\` (409).
+    `,
     params: z.object({ id: pokemonIdParamSchema }),
     body: departBodySchema,
     responses: transition,

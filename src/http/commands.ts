@@ -41,6 +41,7 @@ export const listCommands = defineRoute({
     path: '/commands',
     tags: ['Commands'],
     summary: 'Every chat command and whether it is on',
+    description: 'Public: the commands page needs no sign-in. Read from memory, not the database.',
     responses: {
         200: { description: 'The catalog, in its order', body: z.array(BrobotCommand) },
         429: tooManyRequests,
