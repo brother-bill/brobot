@@ -1,0 +1,19 @@
+# The operations openapi.json documents truthfully without a status singularity's
+# lint ruleset asks for. The `lint-ignore` input of singularity's
+# contract-check.yml, in its format: `<rule> <file>#<pointer>`, the file relative
+# to this directory, each entry under its reason. `pnpm run contract:lint` lints
+# openapi.json with them; an entry the lint no longer reports fails it.
+
+# The three Twitch start routes are browser navigations: they set the flow's
+# state cookie and answer 302 to Twitch's authorize page, and nothing else.
+# There is no 2xx to document (owner, 2026-11-16: no JSON start added).
+operation-2xx-response openapi.json#/paths/~1auth~1twitch~1login/get/responses
+operation-2xx-response openapi.json#/paths/~1auth~1twitch~1streamer/get/responses
+operation-2xx-response openapi.json#/paths/~1auth~1twitch~1bot/get/responses
+
+# The probes (modules/health/health.controller.ts) are @SkipThrottle, with no
+# guard and no input: nothing a caller sends can be refused, so a 4xx would be
+# a status the server never sends. api-time's probes carry the same exception
+# in libs/contracts/.redocly.lint-ignore.yaml.
+operation-4xx-response openapi.json#/paths/~1health/get/responses
+operation-4xx-response openapi.json#/paths/~1health~1live/get/responses

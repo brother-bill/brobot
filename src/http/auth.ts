@@ -151,6 +151,11 @@ export const twitchLogin = defineRoute({
     path: '/auth/twitch/login',
     tags: ['Auth'],
     summary: 'Start the viewer sign-in',
+    description: doc`
+        A browser navigation, never a fetch: sets a fresh \`state\` as the
+        \`brobot_oauth_viewer\` cookie (10 minutes) and redirects to Twitch,
+        which sends the browser on to \`/auth/twitch/callback\`.
+    `,
     responses: { 302: toTwitch, 429: tooManyRequests },
 });
 
@@ -189,6 +194,12 @@ export const twitchStreamerLink = defineRoute({
     path: '/auth/twitch/streamer',
     tags: ['Auth'],
     summary: "Start linking the streamer's Twitch token",
+    description: doc`
+        A browser navigation, never a fetch: sets a fresh \`state\` as the
+        \`brobot_oauth_streamer\` cookie (10 minutes) and redirects to Twitch
+        with \`force_verify\`, so the account is chosen rather than reused.
+        Twitch sends the browser on to \`/auth/twitch/streamer/callback\`.
+    `,
     responses: { 302: toTwitch, 429: tooManyRequests },
 });
 
@@ -221,6 +232,12 @@ export const twitchBotLink = defineRoute({
     path: '/auth/twitch/bot',
     tags: ['Auth'],
     summary: "Start linking the bot's Twitch token",
+    description: doc`
+        A browser navigation, never a fetch: sets a fresh \`state\` as the
+        \`brobot_oauth_bot\` cookie (10 minutes) and redirects to Twitch with
+        \`force_verify\`, so the account is chosen rather than reused. Twitch
+        sends the browser on to \`/auth/twitch/bot/callback\`.
+    `,
     responses: { 302: toTwitch, 429: tooManyRequests },
 });
 
@@ -256,6 +273,8 @@ export const getAuthStatus = defineRoute({
     tags: ['Auth'],
     security: userSession,
     summary: 'The signed-in user',
+    description:
+        "The caller's Twitch identity, roles and granted scopes, read from the database on every call.",
     responses: {
         200: { description: 'The user', body: BrobotCurrentUserStatus },
         401: unauthorized,

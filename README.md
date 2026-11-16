@@ -38,6 +38,7 @@ src/
     health/                 /api/health, /api/health/live
 scripts/                    operator scripts (import-prisma-dump.ts) and the openapi / env:schema exports
 openapi.json                the HTTP contract, generated: `pnpm run openapi`
+contract-lint-ignore.txt    its lint exceptions under singularity's ruleset: `pnpm run contract:lint`
 deploy/                     where the deploy lives (it is not here)
 test/                       shared test helpers, integration global setup
 ```
@@ -73,6 +74,7 @@ pnpm exec tsc --noEmit -p tsconfig.app.json
 pnpm exec tsc --noEmit -p tsconfig.spec.json
 pnpm run test               # unit, including a full AppModule boot with the DB switched off
 pnpm run test:integration   # real Postgres via testcontainers (needs Docker)
+pnpm run contract:lint      # openapi.json under singularity's contract ruleset (from the superproject)
 ```
 
 ## Environment
@@ -209,6 +211,14 @@ OpenAPI 3.1, every operation (24) with its parameters, bodies, responses,
 statuses and security. It is generated from `src/http/` by `pnpm run openapi`
 and committed; `src/http/openapi-document.spec.ts` fails when it is stale. Read
 it, or load it into any OpenAPI viewer, rather than a table here.
+
+It is registered in singularity's contract registry
+(`libs/contracts/documents.yaml`, name `brobot`) and held to singularity's
+lint ruleset: `pnpm run contract:lint` runs the same lint step as
+singularity's `contract-check.yml`. The only exceptions are in
+[`contract-lint-ignore.txt`](contract-lint-ignore.txt), each with its reason:
+the three Twitch start routes answer only 302, and the probes never answer a
+4xx. Everything else the lint reports is fixed in `src/http/`.
 
 `src/http/` holds one `defineRoute` per operation, with every request and
 response as a zod schema whose component id starts with `Brobot`. Each
