@@ -1,0 +1,2317 @@
+{
+    "components": {
+        "schemas": {
+            "BrobotActiveGame": {
+                "description": "Which game may use the Pokémon: `pmd` while it is away in pmd-online.",
+                "enum": [
+                    "brobot",
+                    "pmd"
+                ],
+                "type": "string"
+            },
+            "BrobotBattleOutcome": {
+                "additionalProperties": false,
+                "description": "The last battle (`BattleOutcomeResponse`).",
+                "properties": {
+                    "outcome": {
+                        "description": "The battle log lines, oldest first. Empty when no battle has been fought yet.",
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "updatedDate": {
+                        "format": "date-time",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "outcome",
+                    "updatedDate"
+                ],
+                "type": "object"
+            },
+            "BrobotCommand": {
+                "additionalProperties": false,
+                "description": "A chat command and its switch (`CommandState`).",
+                "properties": {
+                    "aliases": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "category": {
+                        "enum": [
+                            "pokemon",
+                            "voting",
+                            "fun",
+                            "ai"
+                        ],
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "enabled": {
+                        "description": "Switched on: stored, or the catalog default when nobody has flipped it",
+                        "type": "boolean"
+                    },
+                    "name": {
+                        "description": "The command id the switch is stored under",
+                        "example": "pokemon-teambattle",
+                        "type": "string"
+                    },
+                    "trigger": {
+                        "description": "What chat types",
+                        "example": "!pokemon teambattle",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "trigger",
+                    "aliases",
+                    "category",
+                    "description",
+                    "enabled"
+                ],
+                "type": "object"
+            },
+            "BrobotCurrentUserStatus": {
+                "additionalProperties": false,
+                "description": "The signed-in user (`CurrentUserStatus`).",
+                "properties": {
+                    "displayName": {
+                        "type": "string"
+                    },
+                    "oauthId": {
+                        "description": "Twitch user id",
+                        "type": "string"
+                    },
+                    "profileImageUrl": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "roles": {
+                        "description": "`twitch_user.roles`: `StreamerAuth`, `BotAuth`, `Admin`, …",
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "scope": {
+                        "description": "The Twitch scopes granted at sign-in; empty before the first",
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": [
+                    "oauthId",
+                    "displayName",
+                    "roles",
+                    "profileImageUrl",
+                    "scope"
+                ],
+                "type": "object"
+            },
+            "BrobotDepartRequest": {
+                "description": "Send a brobot Pokémon to pmd-online.",
+                "properties": {
+                    "nonce": {
+                        "description": "The caller's idempotency key: a retry with the same nonce answers the same",
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "pmdRegisterId": {
+                        "description": "The pmd-online register row it travels under",
+                        "format": "uuid",
+                        "type": "string"
+                    },
+                    "twitchId": {
+                        "description": "A Twitch user id: 1–32 digits",
+                        "pattern": "^\\d{1,32}$",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "twitchId",
+                    "pmdRegisterId",
+                    "nonce"
+                ],
+                "type": "object"
+            },
+            "BrobotError": {
+                "additionalProperties": false,
+                "description": "Nest's exception body.",
+                "properties": {
+                    "error": {
+                        "description": "The status's name",
+                        "example": "Not Found",
+                        "type": "string"
+                    },
+                    "message": {
+                        "description": "What went wrong",
+                        "example": "No brobot user with that login",
+                        "type": "string"
+                    },
+                    "statusCode": {
+                        "description": "The HTTP status",
+                        "example": 404,
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "statusCode",
+                    "message"
+                ],
+                "type": "object"
+            },
+            "BrobotHealthResponse": {
+                "additionalProperties": false,
+                "description": "Liveness plus the build provenance. Touches no database.",
+                "properties": {
+                    "build": {
+                        "additionalProperties": false,
+                        "properties": {
+                            "sha": {
+                                "description": "BUILD_BROBOT_SHA, or `unknown`",
+                                "type": "string"
+                            },
+                            "time": {
+                                "description": "BUILD_TIME, or `unknown`",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "sha",
+                            "time"
+                        ],
+                        "type": "object"
+                    },
+                    "service": {
+                        "const": "brobot",
+                        "type": "string"
+                    },
+                    "status": {
+                        "const": "ok",
+                        "type": "string"
+                    },
+                    "uptime": {
+                        "description": "Seconds since the process started, rounded",
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "status",
+                    "service",
+                    "uptime",
+                    "build"
+                ],
+                "type": "object"
+            },
+            "BrobotHorrorMode": {
+                "description": "`off`, `rehearsal` (the owner only) or `live` (everyone in chat).",
+                "enum": [
+                    "off",
+                    "rehearsal",
+                    "live"
+                ],
+                "type": "string"
+            },
+            "BrobotHorrorModeResponse": {
+                "additionalProperties": false,
+                "description": "The current mode.",
+                "properties": {
+                    "mode": {
+                        "$ref": "#/components/schemas/BrobotHorrorMode"
+                    }
+                },
+                "required": [
+                    "mode"
+                ],
+                "type": "object"
+            },
+            "BrobotLeaderboardEntry": {
+                "additionalProperties": false,
+                "description": "One Pokémon on the leaderboard (`LeaderboardEntry`).",
+                "properties": {
+                    "activeGame": {
+                        "$ref": "#/components/schemas/BrobotActiveGame"
+                    },
+                    "level": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "nameId": {
+                        "type": "string"
+                    },
+                    "shiny": {
+                        "type": "boolean"
+                    },
+                    "twitchUser": {
+                        "additionalProperties": false,
+                        "properties": {
+                            "displayName": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "displayName"
+                        ],
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "level",
+                    "name",
+                    "nameId",
+                    "shiny",
+                    "activeGame",
+                    "twitchUser"
+                ],
+                "type": "object"
+            },
+            "BrobotLinkedAccount": {
+                "additionalProperties": false,
+                "description": "A streamer or bot token link succeeded.",
+                "properties": {
+                    "linked": {
+                        "description": "The account whose Twitch token was stored: the route's own",
+                        "enum": [
+                            "streamer",
+                            "bot"
+                        ],
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "linked"
+                ],
+                "type": "object"
+            },
+            "BrobotLivenessResponse": {
+                "additionalProperties": false,
+                "description": "The process is up. Touches nothing else.",
+                "properties": {
+                    "pid": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "status": {
+                        "const": "live",
+                        "type": "string"
+                    },
+                    "uptime": {
+                        "description": "Seconds since the process started, rounded",
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "status",
+                    "pid",
+                    "uptime"
+                ],
+                "type": "object"
+            },
+            "BrobotRefreshRequest": {
+                "additionalProperties": false,
+                "description": "A refresh, in bearer mode (token in the body) or cookie mode (`{}`).",
+                "properties": {
+                    "refreshToken": {
+                        "description": "Bearer mode: the refresh token. Absent: the `refreshToken` cookie is used (cookie mode).",
+                        "maxLength": 4096,
+                        "minLength": 1,
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "BrobotReturnRequest": {
+                "description": "Bring a Pokémon home from pmd-online. One of `pmdLevel` and\n`level` is required, and the two agree when both are sent.\n",
+                "properties": {
+                    "level": {
+                        "description": "PMD's level for it (pmd-contracts' spelling). Equal to `pmdLevel` when both are sent.",
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer"
+                    },
+                    "moves": {
+                        "description": "The moveset it came back with, replacing the row's",
+                        "items": {
+                            "maxLength": 40,
+                            "pattern": "^[a-z0-9]+$",
+                            "type": "string"
+                        },
+                        "maxItems": 4,
+                        "minItems": 1,
+                        "type": "array"
+                    },
+                    "nonce": {
+                        "description": "The caller's idempotency key: a retry with the same nonce answers the same",
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "pmdLevel": {
+                        "description": "PMD's level for it (the ticket's spelling). Send this or `level`.",
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer"
+                    },
+                    "pmdRegisterId": {
+                        "description": "The register row it returns from; checked against the row when present",
+                        "format": "uuid",
+                        "type": "string"
+                    },
+                    "species": {
+                        "description": "The species it evolved into while away. Only `nameId` decides; `name` and `dexNum` are validated, then ignored.",
+                        "properties": {
+                            "dexNum": {
+                                "maximum": 1025,
+                                "minimum": 1,
+                                "type": "integer"
+                            },
+                            "name": {
+                                "maxLength": 40,
+                                "minLength": 1,
+                                "type": "string"
+                            },
+                            "nameId": {
+                                "maxLength": 40,
+                                "pattern": "^[a-z0-9]+$",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "nameId",
+                            "name",
+                            "dexNum"
+                        ],
+                        "type": "object"
+                    },
+                    "twitchId": {
+                        "description": "A Twitch user id: 1–32 digits",
+                        "pattern": "^\\d{1,32}$",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "twitchId",
+                    "nonce"
+                ],
+                "type": "object"
+            },
+            "BrobotSetCommandEnabledRequest": {
+                "additionalProperties": false,
+                "description": "Switch one command on or off.",
+                "properties": {
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "name": {
+                        "description": "A command's `name`",
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "enabled"
+                ],
+                "type": "object"
+            },
+            "BrobotSetHorrorModeRequest": {
+                "additionalProperties": false,
+                "description": "The mode to switch to.",
+                "properties": {
+                    "mode": {
+                        "$ref": "#/components/schemas/BrobotHorrorMode"
+                    }
+                },
+                "required": [
+                    "mode"
+                ],
+                "type": "object"
+            },
+            "BrobotTeamPokemon": {
+                "additionalProperties": false,
+                "description": "A Pokémon as the team page shows it (`TeamPokemon`). No ids: the old endpoint hid them too.",
+                "properties": {
+                    "ability": {
+                        "type": "string"
+                    },
+                    "activeGame": {
+                        "$ref": "#/components/schemas/BrobotActiveGame"
+                    },
+                    "color": {
+                        "type": "string"
+                    },
+                    "createdDate": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "dexNum": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "draws": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "gender": {
+                        "type": "string"
+                    },
+                    "item": {
+                        "type": "string"
+                    },
+                    "level": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "losses": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "moves": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "nameId": {
+                        "type": "string"
+                    },
+                    "nature": {
+                        "type": "string"
+                    },
+                    "shiny": {
+                        "type": "boolean"
+                    },
+                    "slot": {
+                        "description": "1–6; null while away in PMD (an away Pokémon holds no slot), and those come last",
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "types": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "updatedDate": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "wins": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "name",
+                    "nameId",
+                    "slot",
+                    "level",
+                    "shiny",
+                    "wins",
+                    "losses",
+                    "draws",
+                    "item",
+                    "moves",
+                    "dexNum",
+                    "color",
+                    "types",
+                    "gender",
+                    "nature",
+                    "ability",
+                    "activeGame",
+                    "createdDate",
+                    "updatedDate"
+                ],
+                "type": "object"
+            },
+            "BrobotTeamResponse": {
+                "additionalProperties": false,
+                "description": "A user's team (`TeamResponse`).",
+                "properties": {
+                    "displayName": {
+                        "type": "string"
+                    },
+                    "pokemonTeam": {
+                        "additionalProperties": false,
+                        "description": "Null when the user exists but has never had a team",
+                        "properties": {
+                            "pokemon": {
+                                "items": {
+                                    "$ref": "#/components/schemas/BrobotTeamPokemon"
+                                },
+                                "type": "array"
+                            }
+                        },
+                        "required": [
+                            "pokemon"
+                        ],
+                        "type": [
+                            "object",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "displayName",
+                    "pokemonTeam"
+                ],
+                "type": "object"
+            },
+            "BrobotTokenPair": {
+                "additionalProperties": false,
+                "description": "brobot's JWT pair (`TokenPair`).",
+                "properties": {
+                    "accessToken": {
+                        "description": "Access JWT, 15 minutes",
+                        "type": "string"
+                    },
+                    "refreshToken": {
+                        "description": "Refresh JWT, 7 days",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "accessToken",
+                    "refreshToken"
+                ],
+                "type": "object"
+            },
+            "BrobotTransferError": {
+                "additionalProperties": false,
+                "description": "A transfer refused, keyed by `code`.",
+                "properties": {
+                    "code": {
+                        "description": "Why. api-time maps 403/404 to \"not found\" and any 409 to\n`brobot_refused` with the message, so the codes are for logs\nand humans.\n",
+                        "enum": [
+                            "pokemon_not_found",
+                            "pokemon_not_owned",
+                            "pokemon_away",
+                            "pokemon_not_away",
+                            "register_mismatch",
+                            "nonce_reused",
+                            "not_forward_evolution",
+                            "unknown_move",
+                            "team_full"
+                        ],
+                        "type": "string"
+                    },
+                    "error": {
+                        "example": "Conflict",
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "statusCode": {
+                        "example": 409,
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "statusCode",
+                    "error",
+                    "code",
+                    "message"
+                ],
+                "type": "object"
+            },
+            "BrobotTransferPokemon": {
+                "additionalProperties": false,
+                "description": "One brobot Pokémon as the transfer API returns it (`TransferPokemon`).",
+                "properties": {
+                    "ability": {
+                        "type": "string"
+                    },
+                    "activeGame": {
+                        "$ref": "#/components/schemas/BrobotActiveGame"
+                    },
+                    "createdDate": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "dexNum": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "draws": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "gender": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "format": "uuid",
+                        "type": "string"
+                    },
+                    "item": {
+                        "type": "string"
+                    },
+                    "level": {
+                        "description": "brobot's level, unbounded",
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "levelAtDeparture": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "losses": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    },
+                    "moves": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "nameId": {
+                        "type": "string"
+                    },
+                    "nature": {
+                        "type": "string"
+                    },
+                    "pmdRegisterId": {
+                        "format": "uuid",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "shiny": {
+                        "type": "boolean"
+                    },
+                    "types": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "wins": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "nameId",
+                    "dexNum",
+                    "name",
+                    "level",
+                    "shiny",
+                    "gender",
+                    "nature",
+                    "ability",
+                    "item",
+                    "moves",
+                    "types",
+                    "wins",
+                    "losses",
+                    "draws",
+                    "activeGame",
+                    "pmdRegisterId",
+                    "levelAtDeparture",
+                    "createdDate"
+                ],
+                "type": "object"
+            },
+            "BrobotTransferPokemonList": {
+                "additionalProperties": false,
+                "description": "A user's Pokémon, every game.",
+                "properties": {
+                    "pokemon": {
+                        "description": "Oldest first",
+                        "items": {
+                            "$ref": "#/components/schemas/BrobotTransferPokemon"
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": [
+                    "pokemon"
+                ],
+                "type": "object"
+            },
+            "BrobotTransferPokemonResponse": {
+                "additionalProperties": false,
+                "description": "The Pokémon after the transition.",
+                "properties": {
+                    "pokemon": {
+                        "$ref": "#/components/schemas/BrobotTransferPokemon"
+                    }
+                },
+                "required": [
+                    "pokemon"
+                ],
+                "type": "object"
+            },
+            "BrobotValidationError": {
+                "additionalProperties": false,
+                "description": "A request the route's zod schema refused, with every issue. Sent\nas the pipe builds it: `{ message: 'Validation failed', issues }`.\n",
+                "properties": {
+                    "error": {
+                        "description": "Absent today, as `statusCode`",
+                        "type": "string"
+                    },
+                    "issues": {
+                        "description": "Every issue at once",
+                        "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                                "message": {
+                                    "example": "pmdLevel (or level) is required",
+                                    "type": "string"
+                                },
+                                "path": {
+                                    "description": "The issue's path, dot-joined; empty for a path parameter (validated on its own)",
+                                    "example": "pmdLevel",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "path",
+                                "message"
+                            ],
+                            "type": "object"
+                        },
+                        "type": "array"
+                    },
+                    "message": {
+                        "description": "Always `Validation failed`",
+                        "example": "Validation failed",
+                        "type": "string"
+                    },
+                    "statusCode": {
+                        "description": "Absent today: the pipe sends `message` and `issues` only",
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "message",
+                    "issues"
+                ],
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "bearerFormat": "JWT",
+                "description": "brobot's access JWT as `Authorization: Bearer` (native clients,\nngx-auth's bearer mode). JwtAuthGuard checks it before the cookie.\n",
+                "scheme": "bearer",
+                "type": "http"
+            },
+            "cookieAuth": {
+                "description": "brobot's access JWT in the httpOnly `accessToken` cookie, set by\nthe viewer login callback and by a cookie-mode refresh. Read by\nJwtAuthGuard after the bearer header.\n",
+                "in": "cookie",
+                "name": "accessToken",
+                "type": "apiKey"
+            },
+            "serviceToken": {
+                "description": "`Authorization: Bearer $BROBOT_SERVICE_TOKEN`, compared in\nconstant time: api-time (and the owner) on the\n`/internal/*` routes. Never a user's session.\n",
+                "scheme": "bearer",
+                "type": "http"
+            }
+        }
+    },
+    "info": {
+        "description": "The HTTP API of brobot, the bro_____bot Twitch bot: Twitch sign-in\nand account links, the command switches, the Pokémon pages of the\nadmin site, and the internal routes api-time and the owner call.\n",
+        "title": "brobot API",
+        "version": "2.0.0"
+    },
+    "openapi": "3.1.0",
+    "paths": {
+        "/auth/refresh": {
+            "post": {
+                "description": "Same contract as api-time's `POST /api/auth/refresh`. A refresh token in\nthe body (bearer mode) gets the new pair back in the body; one from the\n`refreshToken` cookie (web) gets new cookies and an empty `200`.\n\nAn alias of `/auth/twitch/refresh`, at the path libs/ngx-auth's\ninterceptor recognises, so a refresh that itself answers 401 is not\nretried through a refresh.\n",
+                "operationId": "refreshSession",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BrobotRefreshRequest"
+                            }
+                        }
+                    },
+                    "required": false
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTokenPair"
+                                }
+                            }
+                        },
+                        "description": "Bearer mode (a `refreshToken` in the body): the new pair. Cookie\nmode (the `refreshToken` cookie) answers `200` with an empty\nbody and sets new `accessToken` and `refreshToken` cookies, so a\npage script never sees a token.\n"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No refresh token, or one that is invalid or expired (the cookies are cleared)"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "Refresh the session (alias)",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/bot": {
+            "get": {
+                "operationId": "twitchBotLink",
+                "responses": {
+                    "302": {
+                        "description": "To Twitch's authorize page for this flow, with a fresh `state`. The\nstate is also set as the httpOnly `brobot_oauth_<flow>` cookie the\ncallback checks.\n",
+                        "headers": {
+                            "Location": {
+                                "description": "Twitch's authorize URL",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "Start linking the bot's Twitch token",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/bot/callback": {
+            "get": {
+                "description": "Stores the bot's Twitch token. Only `TWITCH_BOT_OAUTH_ID` is\naccepted; the caller's own session is never touched.\n\nThe reason is one of `access_denied` (the user refused on Twitch),\n`invalid_state` (state cookie missing or not matching, no code, or a code\nTwitch would not exchange), `wrong_account` (a streamer or bot link by\nanother account) and `twitch_unavailable` (Twitch, or brobot, failed).\n",
+                "operationId": "twitchBotCallback",
+                "parameters": [
+                    {
+                        "description": "Twitch's authorization code",
+                        "in": "query",
+                        "name": "code",
+                        "required": false,
+                        "schema": {
+                            "minLength": 1,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Must equal the flow's state cookie (`brobot_oauth_<flow>`)",
+                        "in": "query",
+                        "name": "state",
+                        "required": false,
+                        "schema": {
+                            "minLength": 1,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Set by Twitch when the user refused",
+                        "in": "query",
+                        "name": "error",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotLinkedAccount"
+                                }
+                            }
+                        },
+                        "description": "`Accept: application/json`: linked"
+                    },
+                    "302": {
+                        "description": "A browser (no `Accept: application/json`): back to `UI_URL`.\nLinked: `?linked=bot`. On a failure, `?auth_error=<reason>`.\n",
+                        "headers": {
+                            "Location": {
+                                "description": "`UI_URL`, with the outcome in the query",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `access_denied` or `invalid_state`"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `wrong_account` (the streamer and bot links)"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    },
+                    "502": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `twitch_unavailable`"
+                    }
+                },
+                "summary": "Bot token link callback",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/callback": {
+            "get": {
+                "description": "Exchanges the code, upserts the user and issues brobot's JWT pair, set\nas the `accessToken` and `refreshToken` cookies.\n\nThe reason is one of `access_denied` (the user refused on Twitch),\n`invalid_state` (state cookie missing or not matching, no code, or a code\nTwitch would not exchange), `wrong_account` (a streamer or bot link by\nanother account) and `twitch_unavailable` (Twitch, or brobot, failed).\n",
+                "operationId": "twitchCallback",
+                "parameters": [
+                    {
+                        "description": "Twitch's authorization code",
+                        "in": "query",
+                        "name": "code",
+                        "required": false,
+                        "schema": {
+                            "minLength": 1,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Must equal the flow's state cookie (`brobot_oauth_<flow>`)",
+                        "in": "query",
+                        "name": "state",
+                        "required": false,
+                        "schema": {
+                            "minLength": 1,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Set by Twitch when the user refused",
+                        "in": "query",
+                        "name": "error",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTokenPair"
+                                }
+                            }
+                        },
+                        "description": "`Accept: application/json`: signed in; the pair is in the body and the cookies"
+                    },
+                    "302": {
+                        "description": "A browser (no `Accept: application/json`): back to `UI_URL`.\nSigned in: `UI_URL` as it is. On a failure, `?auth_error=<reason>`.\n",
+                        "headers": {
+                            "Location": {
+                                "description": "`UI_URL`, with the outcome in the query",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `access_denied` or `invalid_state`"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `wrong_account` (the streamer and bot links)"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    },
+                    "502": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `twitch_unavailable`"
+                    }
+                },
+                "summary": "Viewer sign-in callback",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/login": {
+            "get": {
+                "operationId": "twitchLogin",
+                "responses": {
+                    "302": {
+                        "description": "To Twitch's authorize page for this flow, with a fresh `state`. The\nstate is also set as the httpOnly `brobot_oauth_<flow>` cookie the\ncallback checks.\n",
+                        "headers": {
+                            "Location": {
+                                "description": "Twitch's authorize URL",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "Start the viewer sign-in",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/logout": {
+            "post": {
+                "description": "Stateless: clears the auth cookies. An access token already issued lives out its 15 minutes.",
+                "operationId": "logout",
+                "responses": {
+                    "204": {
+                        "description": "Signed out"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "Sign out",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/refresh": {
+            "post": {
+                "description": "Same contract as api-time's `POST /api/auth/refresh`. A refresh token in\nthe body (bearer mode) gets the new pair back in the body; one from the\n`refreshToken` cookie (web) gets new cookies and an empty `200`.\n",
+                "operationId": "refreshTwitchSession",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BrobotRefreshRequest"
+                            }
+                        }
+                    },
+                    "required": false
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTokenPair"
+                                }
+                            }
+                        },
+                        "description": "Bearer mode (a `refreshToken` in the body): the new pair. Cookie\nmode (the `refreshToken` cookie) answers `200` with an empty\nbody and sets new `accessToken` and `refreshToken` cookies, so a\npage script never sees a token.\n"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No refresh token, or one that is invalid or expired (the cookies are cleared)"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "Refresh the session",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/status": {
+            "get": {
+                "operationId": "getAuthStatus",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotCurrentUserStatus"
+                                }
+                            }
+                        },
+                        "description": "The user"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No valid credential"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "summary": "The signed-in user",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/streamer": {
+            "get": {
+                "operationId": "twitchStreamerLink",
+                "responses": {
+                    "302": {
+                        "description": "To Twitch's authorize page for this flow, with a fresh `state`. The\nstate is also set as the httpOnly `brobot_oauth_<flow>` cookie the\ncallback checks.\n",
+                        "headers": {
+                            "Location": {
+                                "description": "Twitch's authorize URL",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "Start linking the streamer's Twitch token",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/twitch/streamer/callback": {
+            "get": {
+                "description": "Stores the streamer's Twitch token. Only `TWITCH_STREAMER_OAUTH_ID`\nis accepted; the caller's own session is never touched.\n\nThe reason is one of `access_denied` (the user refused on Twitch),\n`invalid_state` (state cookie missing or not matching, no code, or a code\nTwitch would not exchange), `wrong_account` (a streamer or bot link by\nanother account) and `twitch_unavailable` (Twitch, or brobot, failed).\n",
+                "operationId": "twitchStreamerCallback",
+                "parameters": [
+                    {
+                        "description": "Twitch's authorization code",
+                        "in": "query",
+                        "name": "code",
+                        "required": false,
+                        "schema": {
+                            "minLength": 1,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Must equal the flow's state cookie (`brobot_oauth_<flow>`)",
+                        "in": "query",
+                        "name": "state",
+                        "required": false,
+                        "schema": {
+                            "minLength": 1,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Set by Twitch when the user refused",
+                        "in": "query",
+                        "name": "error",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotLinkedAccount"
+                                }
+                            }
+                        },
+                        "description": "`Accept: application/json`: linked"
+                    },
+                    "302": {
+                        "description": "A browser (no `Accept: application/json`): back to `UI_URL`.\nLinked: `?linked=streamer`. On a failure, `?auth_error=<reason>`.\n",
+                        "headers": {
+                            "Location": {
+                                "description": "`UI_URL`, with the outcome in the query",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `access_denied` or `invalid_state`"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `wrong_account` (the streamer and bot links)"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    },
+                    "502": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "JSON only: `twitch_unavailable`"
+                    }
+                },
+                "summary": "Streamer token link callback",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/commands": {
+            "get": {
+                "operationId": "listCommands",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/BrobotCommand"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "The catalog, in its order"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "Every chat command and whether it is on",
+                "tags": [
+                    "Commands"
+                ]
+            },
+            "post": {
+                "description": "For `StreamerAuth` or `Admin`. The switch is stored and survives a restart.",
+                "operationId": "setCommandEnabled",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BrobotSetCommandEnabledRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotCommand"
+                                }
+                            }
+                        },
+                        "description": "The command as it now is"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No valid credential"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Signed in, but neither `StreamerAuth` nor `Admin`"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No command with that name"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "summary": "Switch a command on or off (admin)",
+                "tags": [
+                    "Commands"
+                ]
+            }
+        },
+        "/health": {
+            "get": {
+                "operationId": "getHealth",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotHealthResponse"
+                                }
+                            }
+                        },
+                        "description": "Healthy"
+                    }
+                },
+                "summary": "Health and build provenance",
+                "tags": [
+                    "Health"
+                ]
+            }
+        },
+        "/health/live": {
+            "get": {
+                "description": "The container healthcheck's probe: the process answers, and nothing else is checked.",
+                "operationId": "getLiveness",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotLivenessResponse"
+                                }
+                            }
+                        },
+                        "description": "Live"
+                    }
+                },
+                "summary": "Liveness probe",
+                "tags": [
+                    "Health"
+                ]
+            }
+        },
+        "/internal/horror/mode": {
+            "get": {
+                "operationId": "getHorrorMode",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotHorrorModeResponse"
+                                }
+                            }
+                        },
+                        "description": "The mode"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No valid credential"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "security": [
+                    {
+                        "serviceToken": []
+                    }
+                ],
+                "summary": "The SLEEP TIGHT mode",
+                "tags": [
+                    "Horror"
+                ]
+            },
+            "post": {
+                "description": "Stored, so it survives a restart.",
+                "operationId": "setHorrorMode",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BrobotSetHorrorModeRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotHorrorModeResponse"
+                                }
+                            }
+                        },
+                        "description": "The new mode"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "`mode must be one of off, rehearsal, live`"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No valid credential"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "security": [
+                    {
+                        "serviceToken": []
+                    }
+                ],
+                "summary": "Switch the SLEEP TIGHT mode",
+                "tags": [
+                    "Horror"
+                ]
+            }
+        },
+        "/internal/transfer/pokemon": {
+            "get": {
+                "description": "The same answer as `/internal/transfer/users/{twitchId}/pokemon`.",
+                "operationId": "listTransferPokemon",
+                "parameters": [
+                    {
+                        "description": "A Twitch user id: 1–32 digits",
+                        "in": "query",
+                        "name": "twitchId",
+                        "required": true,
+                        "schema": {
+                            "pattern": "^\\d{1,32}$",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferPokemonList"
+                                }
+                            }
+                        },
+                        "description": "Every Pokémon the user has"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No valid credential"
+                    }
+                },
+                "security": [
+                    {
+                        "serviceToken": []
+                    }
+                ],
+                "summary": "A user's Pokémon (query form)",
+                "tags": [
+                    "Transfer"
+                ]
+            }
+        },
+        "/internal/transfer/pokemon/{id}/depart": {
+            "post": {
+                "operationId": "departPokemon",
+                "parameters": [
+                    {
+                        "description": "The Pokémon's brobot row uuid",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "format": "uuid",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BrobotDepartRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferPokemonResponse"
+                                }
+                            }
+                        },
+                        "description": "Done, or the same nonce again: the same answer"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No valid credential"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferError"
+                                }
+                            }
+                        },
+                        "description": "`pokemon_not_owned`: the Pokémon belongs to another Twitch user"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferError"
+                                }
+                            }
+                        },
+                        "description": "`pokemon_not_found`"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferError"
+                                }
+                            }
+                        },
+                        "description": "Refused by the state machine; `code` says why"
+                    }
+                },
+                "security": [
+                    {
+                        "serviceToken": []
+                    }
+                ],
+                "summary": "Send a Pokémon to pmd-online",
+                "tags": [
+                    "Transfer"
+                ]
+            }
+        },
+        "/internal/transfer/pokemon/{id}/return": {
+            "post": {
+                "description": "It comes home into the lowest free slot of its team; `team_full` (409) when there is none.",
+                "operationId": "returnPokemon",
+                "parameters": [
+                    {
+                        "description": "The Pokémon's brobot row uuid",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "format": "uuid",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BrobotReturnRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferPokemonResponse"
+                                }
+                            }
+                        },
+                        "description": "Done, or the same nonce again: the same answer"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No valid credential"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferError"
+                                }
+                            }
+                        },
+                        "description": "`pokemon_not_owned`: the Pokémon belongs to another Twitch user"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferError"
+                                }
+                            }
+                        },
+                        "description": "`pokemon_not_found`"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferError"
+                                }
+                            }
+                        },
+                        "description": "Refused by the state machine; `code` says why"
+                    }
+                },
+                "security": [
+                    {
+                        "serviceToken": []
+                    }
+                ],
+                "summary": "Bring a Pokémon home from pmd-online",
+                "tags": [
+                    "Transfer"
+                ]
+            }
+        },
+        "/internal/transfer/users/{twitchId}/pokemon": {
+            "get": {
+                "description": "The path api-time's client calls (pmd-contracts).",
+                "operationId": "listUserTransferPokemon",
+                "parameters": [
+                    {
+                        "description": "A Twitch user id: 1–32 digits",
+                        "in": "path",
+                        "name": "twitchId",
+                        "required": true,
+                        "schema": {
+                            "pattern": "^\\d{1,32}$",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTransferPokemonList"
+                                }
+                            }
+                        },
+                        "description": "Every Pokémon the user has"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No valid credential"
+                    }
+                },
+                "security": [
+                    {
+                        "serviceToken": []
+                    }
+                ],
+                "summary": "A user's Pokémon",
+                "tags": [
+                    "Transfer"
+                ]
+            }
+        },
+        "/pokemon/battle-outcome": {
+            "get": {
+                "operationId": "getBattleOutcome",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotBattleOutcome"
+                                }
+                            }
+                        },
+                        "description": "The battle log"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "The last one-on-one battle",
+                "tags": [
+                    "Pokemon"
+                ]
+            }
+        },
+        "/pokemon/leaderboard": {
+            "get": {
+                "description": "Highest levels first; ties go to the Pokémon that got there first.",
+                "operationId": "getLeaderboard",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/BrobotLeaderboardEntry"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "The leaderboard"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "The highest-level Pokémon",
+                "tags": [
+                    "Pokemon"
+                ]
+            }
+        },
+        "/pokemon/team-battle-outcome": {
+            "get": {
+                "operationId": "getTeamBattleOutcome",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotBattleOutcome"
+                                }
+                            }
+                        },
+                        "description": "The battle log"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 120 requests per client per minute (the global ThrottlerGuard)"
+                    }
+                },
+                "summary": "The last team battle",
+                "tags": [
+                    "Pokemon"
+                ]
+            }
+        },
+        "/pokemon/teams": {
+            "get": {
+                "description": "10 lookups per client per minute, on top of a 60 s per-login cache.",
+                "operationId": "getTeam",
+                "parameters": [
+                    {
+                        "description": "A Twitch login: 1–25 of `[A-Za-z0-9_]`; anything else cannot exist and never reaches Twitch",
+                        "in": "query",
+                        "name": "login",
+                        "required": true,
+                        "schema": {
+                            "pattern": "^[A-Za-z0-9_]{1,25}$",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotTeamResponse"
+                                }
+                            }
+                        },
+                        "description": "The team"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotValidationError"
+                                }
+                            }
+                        },
+                        "description": "The request failed validation"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "No brobot user with that login"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "Throttled: over 10 lookups per client per minute"
+                    },
+                    "502": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BrobotError"
+                                }
+                            }
+                        },
+                        "description": "The Twitch lookup failed"
+                    }
+                },
+                "summary": "A user's team, by Twitch login",
+                "tags": [
+                    "Pokemon"
+                ]
+            }
+        }
+    },
+    "security": [],
+    "servers": [
+        {
+            "description": "API base path (the global prefix)",
+            "url": "/api"
+        }
+    ],
+    "tags": [
+        {
+            "description": "Probes. Public and unthrottled.",
+            "name": "Health"
+        },
+        {
+            "description": "Twitch sign-in, the streamer and bot token links, and the session.",
+            "name": "Auth"
+        },
+        {
+            "description": "The chat commands and their switches (the admin site's commands page).",
+            "name": "Commands"
+        },
+        {
+            "description": "The admin site's public Pokémon pages.",
+            "name": "Pokemon"
+        },
+        {
+            "description": "api-time's side door: Pokémon travelling to and from pmd-online.",
+            "name": "Transfer"
+        },
+        {
+            "description": "The SLEEP TIGHT gate, for the owner.",
+            "name": "Horror"
+        }
+    ]
+}

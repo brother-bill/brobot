@@ -26,7 +26,7 @@ src/
   migrations/               empty until the owner generates the initial migration
   common/                   CORS, constant-time compare, zod pipe
   http/                     the whole HTTP surface as zod route definitions (@singularity/http-contract),
-                            and brobotDocument(), its OpenAPI 3.1 document
+                            and brobotDocument(), its OpenAPI 3.1 document (committed as openapi.json)
   modules/
     auth/                   the three Twitch OAuth flows, JWT, guards, the Twitch token stores
     pokemon/                read-only HTTP for the admin site, and the game: generation, team rules, exclusivity, battles
@@ -36,7 +36,8 @@ src/
     transfer/               /api/internal/transfer/* for api-time, the active_game state machine,
                             transfer_log (entities/), and the Prisma-dump import's mappers (import/)
     health/                 /api/health, /api/health/live
-scripts/                    operator scripts: import-prisma-dump.ts
+scripts/                    operator scripts (import-prisma-dump.ts) and the openapi / env:schema exports
+openapi.json                the HTTP contract, generated: `pnpm run openapi`
 deploy/                     where the deploy lives (it is not here)
 test/                       shared test helpers, integration global setup
 ```
@@ -203,70 +204,54 @@ share one brobot session.
 
 ## HTTP surface (for the admin site, U1)
 
-Everything is under `/api`. JSON bodies use camelCase. Errors are Nest's
-standard `{ statusCode, message, error }` (`error` is absent when the
-exception carries no message: `{ statusCode: 401, message: 'Unauthorized' }`);
-zod validation failures (400) are `{ message: 'Validation failed', issues:
-[{ path, message }] }`.
+Everything is under `/api`. **The contract is [`openapi.json`](openapi.json)**:
+OpenAPI 3.1, every operation (24) with its parameters, bodies, responses,
+statuses and security. It is generated from `src/http/` by `pnpm run openapi`
+and committed; `src/http/openapi-document.spec.ts` fails when it is stale. Read
+it, or load it into any OpenAPI viewer, rather than a table here.
 
-The tables below are a summary. The contract is `src/http/`: one
-`defineRoute` per operation (24), with every request and response as a zod
-schema whose component id starts with `Brobot`. Each controller validates
-with its route's slots (`new ZodValidationPipe(routes.getTeam.query)`) and
-returns `RouteResult<typeof routes.getTeam>`, so a handler that answers
-anything else does not compile. `brobotDocument()` builds the OpenAPI 3.1
-document, and `src/http/document.spec.ts` holds it equal to what Nest serves:
-the same operations at the same statuses. A route change is made there first.
+`src/http/` holds one `defineRoute` per operation, with every request and
+response as a zod schema whose component id starts with `Brobot`. Each
+controller validates with its route's slots
+(`new ZodValidationPipe(routes.getTeam.query)`) and returns
+`RouteResult<typeof routes.getTeam>`, so a handler that answers anything else
+does not compile. `brobotDocument()` builds the document, and
+`src/http/document.spec.ts` holds it equal to what Nest serves: the same
+operations at the same statuses. A route change is made there first.
 
-### Health: public, no database, not rate-limited
+What the document does not say:
 
-| Route | Response |
-|---|---|
-| `GET /api/health/live` | `{ status: 'live', pid: number, uptime: number }` |
-| `GET /api/health` | `{ status: 'ok', service: 'brobot', uptime: number, build: { sha: string, time: string } }` |
+- **Errors** are Nest's standard `{ statusCode, message, error }` (`error` is
+  absent when the exception carries no message:
+  `{ statusCode: 401, message: 'Unauthorized' }`); zod validation failures
+  (400) are `{ message: 'Validation failed', issues: [{ path, message }] }`.
+- **Sign-in is a page load.** The UI navigates to `GET /api/auth/twitch/login`
+  (or `streamer`, `bot`), not XHR: each answers 302 to Twitch and sets the
+  flow's single-use state cookie.
+- **Cookies.** The viewer callback sets the `accessToken` and `refreshToken`
+  cookies (see "Auth model") and 302s to `UI_URL`; a client sending
+  `Accept: application/json` gets the token pair in the body instead. The
+  streamer and bot callbacks leave the session cookies untouched and 302 to
+  `UI_URL?linked=streamer` or `?linked=bot`. A failed callback 302s to
+  `UI_URL?auth_error=<reason>` (`access_denied`, `invalid_state`: just start
+  again, `wrong_account`, `twitch_unavailable`). `POST /api/auth/twitch/refresh`
+  takes `{ refreshToken }` in bearer mode and answers with a new pair, or no
+  body in cookie mode and answers with new cookies; an invalid token is a 401
+  that clears both cookies. `POST /api/auth/refresh` is its alias, because
+  ngx-auth's interceptor skips its 401 retry only for URLs containing
+  `/auth/refresh`. `POST /api/auth/twitch/logout` clears both cookies; it is
+  stateless, so an issued access token lives out its 15 min.
+- **`GET /api/pokemon/teams`** is rate-limited to 10/min per client, and each
+  login's answer is cached for 60 s. A Pokémon with `activeGame: 'pmd'` is
+  away in pmd-online; show it as such. It holds no slot (`slot: null`), so it
+  is still on the team page and the leaderboard, but not in a numbered slot.
+- **Command switches.** A switch that has been flipped (`POST /api/commands`)
+  is stored in `command_setting` and survives a restart; the others run on
+  their catalog default. `quack` starts off, and the `Enable Quacks`
+  channel-point redeem turns it on. A switched-off command is ignored in chat,
+  except the votes, which answer `!chatban is turned off`.
 
-### Auth: `/api/auth/twitch`
-
-| Route | Behaviour |
-|---|---|
-| `GET login` · `GET streamer` · `GET bot` | 302 to Twitch, and sets the flow's state cookie. The UI navigates here (a full page load, not XHR). |
-| `GET callback` | Viewer login. Sets the `accessToken` and `refreshToken` cookies, then 302s to `UI_URL`. A client sending `Accept: application/json` gets `200 { accessToken, refreshToken }` instead. |
-| `GET streamer/callback` · `GET bot/callback` | Stores the token, then 302s to `UI_URL?linked=streamer` or `?linked=bot`. With JSON: `200 { linked }`. Session cookies are left untouched. |
-| Any callback failure | 302 to `UI_URL?auth_error=<reason>`, where reason is `access_denied` (the user declined), `invalid_state` (stale or forged callback, or a reused code: just start again), `wrong_account` (streamer/bot flow completed with another account) or `twitch_unavailable`. With JSON: 401 / 403 / 502. |
-| `GET status` (JWT) | `{ oauthId, displayName, roles: string[], profileImageUrl: string \| null, scope: string[] }`, or 401 |
-| `POST refresh` | Body `{ refreshToken }` (bearer mode) → `200 { accessToken, refreshToken }`. No body (cookie mode) → new cookies and an empty `200`. Invalid → 401 and the cookies are cleared. |
-| `POST /api/auth/refresh` | Alias of the above. ngx-auth's interceptor skips its 401 retry only for URLs containing `/auth/refresh`. |
-| `POST logout` | 204; clears both cookies (stateless: an issued access token lives out its 15 min) |
-
-### Pokémon: public reads
-
-| Route | Response |
-|---|---|
-| `GET /api/pokemon/leaderboard` | Top 30 by level: `[{ level, name, nameId, shiny, activeGame: 'brobot' \| 'pmd', twitchUser: { displayName } }]` |
-| `GET /api/pokemon/teams?login=<twitch login>` | `{ displayName, pokemonTeam: { pokemon: TeamPokemon[] } \| null }`, sorted by slot, then the Pokémon away in PMD (`slot: null`). 400 if the login is not `[A-Za-z0-9_]{1,25}`; 404 if brobot has never seen that user; 502 if Twitch is down. **Rate-limited to 10/min per client; each login's answer is cached for 60 s.** |
-| `GET /api/pokemon/battle-outcome` | Last `!pokemon battle`: `{ outcome: string[], updatedDate: string \| null }` |
-| `GET /api/pokemon/team-battle-outcome` | Last `!pokemon teambattle`, same shape |
-
-`TeamPokemon` is `{ name, nameId, slot: number | null, level, shiny, wins,
-losses, draws, item, moves: string[], dexNum, color, types: string[], gender,
-nature, ability, activeGame, createdDate, updatedDate }`. It carries no ids.
-`activeGame: 'pmd'` means the Pokémon is away in pmd-online; show it as
-such. An away Pokémon holds no slot, so its `slot` is `null`: it is still on
-the team page (and the leaderboard), but not in a numbered slot.
-
-### Commands
-
-| Route | Response |
-|---|---|
-| `GET /api/commands` (public) | `[{ name, trigger, aliases: string[], category: 'pokemon' \| 'voting' \| 'fun' \| 'ai', description, enabled: boolean }]` |
-| `POST /api/commands` (admin) | Body `{ name, enabled: boolean }` → the updated command. 401 when signed out, 403 when not admin, 404 for an unknown name. |
-
-A switch that has been flipped is stored in `command_setting` and survives a
-restart; the others run on their catalog default. `quack` starts off, and the
-`Enable Quacks` channel-point redeem turns it on. A switched-off command is
-ignored in chat, except the votes, which answer `!chatban is turned off`.
-
-### Everything else
+### Outside OpenAPI
 
 - **Rate limit:** 120 requests/min per client on every route except health.
   Over the limit returns `429`.
@@ -387,6 +372,9 @@ with its own generic refusal line (`transfer.refusal.refused`).
 ```
 
 ### Routes
+
+The shapes below are a reading aid; `openapi.json` (tag `Transfer`) is the
+contract.
 
 | Route | Body | 200 response |
 |---|---|---|

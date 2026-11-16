@@ -3,6 +3,20 @@
 Start with `README.md` (layout, checks, auth model) and the superproject's
 `guidelines/PROJECT.md`. This file holds what an agent needs on top of them.
 
+## HTTP routes and openapi.json
+
+`src/http/` is the authority on the HTTP surface: one `defineRoute` per
+operation, every request and response a zod schema. `openapi.json` is
+generated from it and committed as the contract, and the README points to it
+rather than listing routes. Changing a route means:
+
+1. edit its definition in `src/http/` (and the controller, which validates
+   with the route's slots and is typed by its responses; `document.spec.ts`
+   fails when the two disagree);
+2. `pnpm run openapi` and commit `openapi.json` (`openapi-document.spec.ts`
+   fails when it is stale). The script reads `@singularity/http-contract` from
+   source, so it needs no library build.
+
 ## Environment and the config store
 
 `src/config/env.schema.ts` is the authority on every variable: the zod schema
