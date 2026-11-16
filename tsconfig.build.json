@@ -1,0 +1,18 @@
+{
+    // Emit config, used by `nest build` / `nest start` (nest-cli.json).
+    // Identical to tsconfig.app.json except that @singularity/http-contract
+    // resolves to its built dist/ again, the code `require` loads at run time,
+    // instead of its source (tsconfig.base.json's `paths`, which tsconfig.app.json
+    // inherits for the typecheck and would put the library outside rootDir).
+    // The build script and the nest plugin run the library freshness guard
+    // first, and fail with the recovery command when the dist is missing or
+    // stale: `pnpm exec turbo run build --filter=@singularity/brobot`
+    // builds it (turbo's `build` depends on ^build).
+    "extends": "./tsconfig.app.json",
+    "compilerOptions": {
+        "rootDir": "./src",
+        "paths": {
+            "@singularity/http-contract": ["libs/http-contract/dist/index.d.ts"]
+        }
+    }
+}

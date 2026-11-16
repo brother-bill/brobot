@@ -1,84 +1,13 @@
-import { z } from 'zod';
-import { PMD_LEVEL_CAP } from './transfer-rules';
-
 /**
- * Request shapes of `/api/internal/transfer`. The authoritative copy of the
- * contract is `libs/pmd-contracts/src/transfer.ts` in the superproject
- * (ticket A1); these accept everything it sends, plus the ticket-B3 spelling
- * of the return body (`pmdLevel` for `level`, no `pmdRegisterId`). The
- * return body's `species` and `moves` mirror `BrobotReturnRequestSchema`'s.
+ * The request shapes of `/api/internal/transfer`. Their one copy is the route
+ * definitions' (`src/http/transfer.ts`), which the controller validates
+ * with; this re-export keeps the service's and the specs' imports.
  */
-
-/** Twitch user ids are numeric strings (brobot's `twitch_user.oauth_id`). */
-export const twitchIdSchema = z
-    .string()
-    .trim()
-    .regex(/^\d{1,32}$/, 'must be a Twitch user id');
-
-/** The caller's idempotency key. api-time sends a uuid; any short token is accepted. */
-const nonceSchema = z.string().trim().min(1).max(128);
-
-const pmdLevelSchema = z.number().int().min(1).max(PMD_LEVEL_CAP);
-
-/** A `@pkmn` (showdown) id, as pmd-contracts spells species and move ids on this wire. */
-const pkmnIdSchema = z
-    .string()
-    .regex(/^[a-z0-9]+$/, 'must be a @pkmn id')
-    .max(40);
-
-export const pokemonIdParamSchema = z.uuid({ error: 'must be a brobot Pokémon id' });
-
-export const twitchIdQuerySchema = z.object({ twitchId: twitchIdSchema });
-
-export const departBodySchema = z.object({
-    twitchId: twitchIdSchema,
-    pmdRegisterId: z.uuid(),
-    nonce: nonceSchema,
-});
-export type DepartBody = z.infer<typeof departBodySchema>;
-
-export const returnBodySchema = z
-    .object({
-        twitchId: twitchIdSchema,
-        /** api-time (A1) sends the register row it is returning from; checked against the row when present. */
-        pmdRegisterId: z.uuid().optional(),
-        /** PMD's level for it. `level` is the pmd-contracts spelling, `pmdLevel` the ticket's; send one. */
-        pmdLevel: pmdLevelSchema.optional(),
-        level: pmdLevelSchema.optional(),
-        nonce: nonceSchema,
-        /**
-         * The species it evolved into while away. Only `nameId` decides
-         * anything: brobot recomputes the other species columns from
-         * `@pkmn`, so `name` and `dexNum` are validated and then ignored.
-         */
-        species: z
-            .object({
-                nameId: pkmnIdSchema,
-                name: z.string().min(1).max(40),
-                dexNum: z.number().int().min(1).max(1025),
-            })
-            .optional(),
-        /** The moveset it came back with, replacing the row's. */
-        moves: z.array(pkmnIdSchema).min(1).max(4).optional(),
-    })
-    .refine(body => body.pmdLevel !== undefined || body.level !== undefined, {
-        error: 'pmdLevel (or level) is required',
-        path: ['pmdLevel'],
-    })
-    .refine(
-        body =>
-            body.pmdLevel === undefined || body.level === undefined || body.pmdLevel === body.level,
-        {
-            error: 'pmdLevel and level disagree',
-            path: ['level'],
-        },
-    )
-    .transform(body => ({
-        twitchId: body.twitchId,
-        pmdRegisterId: body.pmdRegisterId ?? null,
-        pmdLevel: (body.pmdLevel ?? body.level) as number,
-        nonce: body.nonce,
-        species: body.species ? { nameId: body.species.nameId } : null,
-        moves: body.moves ?? null,
-    }));
-export type ReturnBody = z.infer<typeof returnBodySchema>;
+export {
+    departBodySchema,
+    pokemonIdParamSchema,
+    returnBodySchema,
+    twitchIdQuerySchema,
+    twitchIdSchema,
+} from '../../http/transfer';
+export type { DepartBody, ReturnBody } from '../../http/transfer';

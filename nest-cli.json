@@ -5,7 +5,16 @@
     "entryFile": "main",
     "compilerOptions": {
         "deleteOutDir": true,
-        "tsConfigPath": "tsconfig.app.json",
+        "tsConfigPath": "tsconfig.build.json",
+        "plugins": [
+            {
+                "name": "../../../scripts/nest-library-freshness.cjs",
+                "options": {
+                    "consumer": "apps/brobot",
+                    "tsconfig": "tsconfig.build.json"
+                }
+            }
+        ],
         "assets": [],
         "watchAssets": false
     }

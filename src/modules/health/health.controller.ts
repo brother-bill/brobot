@@ -1,18 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
-
-export interface LivenessResponse {
-    status: 'live';
-    pid: number;
-    uptime: number;
-}
-
-export interface HealthResponse {
-    status: 'ok';
-    service: 'brobot';
-    uptime: number;
-    build: { sha: string; time: string };
-}
+import type { RouteResult } from '@singularity/http-contract';
+import { routes } from '../../http';
 
 /**
  * Neither endpoint touches the database, Twitch or anything else — the
@@ -24,12 +13,12 @@ export interface HealthResponse {
 @SkipThrottle()
 export class HealthController {
     @Get('live')
-    live(): LivenessResponse {
+    live(): RouteResult<typeof routes.getLiveness> {
         return { status: 'live', pid: process.pid, uptime: Math.round(process.uptime()) };
     }
 
     @Get()
-    health(): HealthResponse {
+    health(): RouteResult<typeof routes.getHealth> {
         return {
             status: 'ok',
             service: 'brobot',

@@ -1,8 +1,10 @@
 {
     "extends": "./tsconfig.json",
     "compilerOptions": {
+        // Build output. rootDir lives in tsconfig.build.json: this config reads
+        // @singularity/http-contract from source (tsconfig.base.json's `paths`),
+        // which sits outside ./src and would otherwise fail TS6059.
         "outDir": "./dist",
-        "rootDir": "./src",
         "types": ["node"]
     },
     "include": ["src/**/*.ts"],
