@@ -11,13 +11,19 @@ import { vitestWorkers } from '../../config/test-workers.mjs';
  */
 export default defineConfig({
     resolve: {
-        // @singularity/http-contract from its source, as `paths` in
-        // tsconfig.base.json does for the typecheck, so the specs need no
-        // library build first (`nest build` reads its dist: tsconfig.build.json).
+        // @singularity/http-contract and @singularity/pmd-contracts from their
+        // source, as `paths` in tsconfig.base.json does for the typecheck, so
+        // the specs need no library build first (`nest build` reads
+        // http-contract's dist: tsconfig.build.json). pmd-contracts is a
+        // devDependency, read by specs only (transfer-wire.spec.ts).
         alias: [
             {
                 find: /^@singularity\/http-contract$/,
                 replacement: fileURLToPath(new URL('../../libs/http-contract/src/index.ts', import.meta.url)),
+            },
+            {
+                find: /^@singularity\/pmd-contracts$/,
+                replacement: fileURLToPath(new URL('../../libs/pmd-contracts/src/index.ts', import.meta.url)),
             },
         ],
     },

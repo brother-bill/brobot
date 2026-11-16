@@ -323,7 +323,13 @@ Twitch account, then calls brobot with that Twitch id. brobot checks that
 the row belongs to that Twitch id and flips `active_game`. The shapes are
 mirrored in the superproject at `libs/pmd-contracts/src/transfer.ts`
 (`BrobotPokemonSchema` and the request schemas, ticket A1). Change both
-together.
+together: `src/modules/transfer/transfer-wire.spec.ts` fails when they drift
+(a body pmd-contracts accepts that the route refuses or strips, a path
+api-time builds that is not the route's, an answer api-time would reject).
+Its `KNOWN_GAPS` are the bodies pmd-contracts accepts and brobot still
+refuses. `@singularity/pmd-contracts` is a devDependency, for that spec only,
+so the image does not carry it; `tsconfig.build.json` maps it to source so
+the build never asks for its `dist/`.
 
 - **Auth:** `Authorization: Bearer $BROBOT_SERVICE_TOKEN` on every route.
   Anything else gets 401. These routes are not rate-limited, because every
