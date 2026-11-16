@@ -14,12 +14,12 @@ import {
     UnauthorizedException,
     UseGuards,
 } from '@nestjs/common';
+import type { RouteInput, RouteResult } from '@singularity/http-contract';
 import type { Request, Response } from 'express';
-import { z } from 'zod';
 import { EnvService } from '../../config/env.service';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe';
+import { routes } from '../../http';
 import { AuthService, WrongTwitchAccountError } from './auth.service';
-import type { CurrentUserStatus } from './auth.service';
 import { CurrentUser } from './guards/authenticated-user';
 import type { AuthenticatedUser } from './guards/authenticated-user';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -29,15 +29,17 @@ import type { TokenPair } from './token.service';
 import { TwitchApiError, TwitchOAuthClient } from './twitch-oauth.client';
 import type { OAuthFlow } from './twitch-oauth.client';
 
-const callbackQuerySchema = z.object({
-    code: z.string().min(1).optional(),
-    state: z.string().min(1).optional(),
-    error: z.string().optional(),
-});
-type CallbackQuery = z.infer<typeof callbackQuerySchema>;
+/** The three callbacks' queries are one shape (`src/http/auth.ts`). */
+type CallbackQuery = RouteInput<typeof routes.twitchCallback>['query'];
 
-const refreshBodySchema = z.object({ refreshToken: z.string().min(1).optional() }).optional();
-type RefreshBody = z.infer<typeof refreshBodySchema>;
+/** Both refresh routes take the same body. */
+type RefreshBody = RouteInput<typeof routes.refreshTwitchSession>['body'];
+
+/**
+ * What a refresh answers: the pair in bearer mode, nothing (an empty `200`)
+ * in cookie mode. The route documents the pair.
+ */
+type RefreshResult = RouteResult<typeof routes.refreshTwitchSession> | undefined;
 
 /** Why a callback sent the browser back to the UI without success; read by the admin site. */
 export type AuthErrorReason = 'access_denied' | 'invalid_state' | 'wrong_account' | 'twitch_unavailable';
@@ -75,7 +77,7 @@ export class AuthController {
 
     @Get('callback')
     async callback(
-        @Query(new ZodValidationPipe(callbackQuerySchema)) query: CallbackQuery,
+        @Query(new ZodValidationPipe(routes.twitchCallback.query)) query: CallbackQuery,
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<void> {
@@ -84,7 +86,7 @@ export class AuthController {
             const { tokens } = await this.auth.completeViewerLogin(code);
             this.tokens.setAuthCookies(res, tokens);
             if (wantsJson(req)) {
-                res.status(HttpStatus.OK).json(tokens satisfies TokenPair);
+                res.status(HttpStatus.OK).json(tokens satisfies RouteResult<typeof routes.twitchCallback, 200>);
                 return;
             }
             res.redirect(this.env.get('UI_URL'));
@@ -102,7 +104,7 @@ export class AuthController {
 
     @Get('streamer/callback')
     async streamerCallback(
-        @Query(new ZodValidationPipe(callbackQuerySchema)) query: CallbackQuery,
+        @Query(new ZodValidationPipe(routes.twitchStreamerCallback.query)) query: CallbackQuery,
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<void> {
@@ -116,7 +118,7 @@ export class AuthController {
 
     @Get('bot/callback')
     async botCallback(
-        @Query(new ZodValidationPipe(callbackQuerySchema)) query: CallbackQuery,
+        @Query(new ZodValidationPipe(routes.twitchBotCallback.query)) query: CallbackQuery,
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<void> {
@@ -127,7 +129,7 @@ export class AuthController {
 
     @Get('status')
     @UseGuards(JwtAuthGuard)
-    status(@CurrentUser() user: AuthenticatedUser): Promise<CurrentUserStatus> {
+    status(@CurrentUser() user: AuthenticatedUser): Promise<RouteResult<typeof routes.getAuthStatus>> {
         return this.auth.status(user.oauthId);
     }
 
@@ -140,10 +142,10 @@ export class AuthController {
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
     refresh(
-        @Body(new ZodValidationPipe(refreshBodySchema)) body: RefreshBody,
+        @Body(new ZodValidationPipe(routes.refreshTwitchSession.body.schema)) body: RefreshBody,
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
-    ): Promise<TokenPair | undefined> {
+    ): Promise<RefreshResult> {
         return refreshSession(this.auth, this.tokens, body, req, res);
     }
 
@@ -179,7 +181,7 @@ export class AuthController {
             const code = this.checkCallback(kind, query, req, res);
             await this.auth.linkAccount(kind, code);
             if (wantsJson(req)) {
-                res.status(HttpStatus.OK).json({ linked: kind });
+                res.status(HttpStatus.OK).json({ linked: kind } satisfies RouteResult<typeof routes.twitchStreamerCallback, 200>);
                 return;
             }
             res.redirect(withParam(this.env.get('UI_URL'), 'linked', kind));
@@ -226,10 +228,10 @@ export class AuthRefreshAliasController {
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
     refresh(
-        @Body(new ZodValidationPipe(refreshBodySchema)) body: RefreshBody,
+        @Body(new ZodValidationPipe(routes.refreshSession.body.schema)) body: RefreshBody,
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
-    ): Promise<TokenPair | undefined> {
+    ): Promise<RefreshResult> {
         return refreshSession(this.auth, this.tokens, body, req, res);
     }
 }
@@ -240,7 +242,7 @@ async function refreshSession(
     body: RefreshBody,
     req: Request,
     res: Response,
-): Promise<TokenPair | undefined> {
+): Promise<RefreshResult> {
     const cookies = req.cookies as Record<string, string | undefined> | undefined;
     const fromBody = body?.refreshToken;
     const refreshToken = fromBody ?? cookies?.[REFRESH_COOKIE];

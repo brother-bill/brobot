@@ -5,7 +5,7 @@
     "description": "brobot — Twitch bot + API for the bro_____bot channel, rebuilt on NestJS 11 + MikroORM",
     "scripts": {
         "dev": "nest start --watch",
-        "build": "nest build",
+        "build": "node ../../scripts/check-library-freshness.mjs --consumer apps/brobot --tsconfig tsconfig.build.json && nest build",
         "start": "node dist/main.js",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json",
@@ -34,6 +34,7 @@
         "@nestjs/throttler": "^6.5.0",
         "@nestjs/websockets": "^11.1.24",
         "@pkmn/sim": "^0.10.11",
+        "@singularity/http-contract": "workspace:*",
         "@twurple/api": "^8.2.0",
         "@twurple/auth": "^8.2.0",
         "@twurple/chat": "^8.2.0",

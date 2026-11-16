@@ -1,19 +1,12 @@
 import { BadGatewayException, Controller, Get, NotFoundException, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { z } from 'zod';
+import type { RouteInput, RouteResult } from '@singularity/http-contract';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe';
+import { routes } from '../../http';
 import { TwitchApiError } from '../auth/twitch-oauth.client';
 import { PokemonReadService } from './pokemon-read.service';
-import type { BattleOutcomeResponse, LeaderboardEntry, TeamResponse } from './pokemon-read.service';
+import type { TeamResponse } from './pokemon-read.service';
 import { TeamLookupService } from './team-lookup.service';
-
-/** Twitch logins are 1–25 of `[A-Za-z0-9_]`; anything else cannot exist and never reaches Twitch. */
-const teamsQuerySchema = z.object({
-    login: z
-        .string()
-        .trim()
-        .regex(/^[A-Za-z0-9_]{1,25}$/, 'must be a Twitch login'),
-});
 
 /**
  * Public read endpoints for the admin site's Pokémon pages. Public because
@@ -27,7 +20,7 @@ export class PokemonController {
     ) {}
 
     @Get('leaderboard')
-    leaderboard(): Promise<LeaderboardEntry[]> {
+    leaderboard(): Promise<RouteResult<typeof routes.getLeaderboard>> {
         return this.pokemon.leaderboard();
     }
 
@@ -35,8 +28,8 @@ export class PokemonController {
     @Get('teams')
     @Throttle({ default: { limit: 10, ttl: 60_000 } })
     async team(
-        @Query(new ZodValidationPipe(teamsQuerySchema)) query: z.infer<typeof teamsQuerySchema>,
-    ): Promise<TeamResponse> {
+        @Query(new ZodValidationPipe(routes.getTeam.query)) query: RouteInput<typeof routes.getTeam>['query'],
+    ): Promise<RouteResult<typeof routes.getTeam>> {
         let team: TeamResponse | null;
         try {
             team = await this.teams.findByLogin(query.login);
@@ -49,12 +42,12 @@ export class PokemonController {
     }
 
     @Get('battle-outcome')
-    battleOutcome(): Promise<BattleOutcomeResponse> {
+    battleOutcome(): Promise<RouteResult<typeof routes.getBattleOutcome>> {
         return this.pokemon.battleOutcome();
     }
 
     @Get('team-battle-outcome')
-    teamBattleOutcome(): Promise<BattleOutcomeResponse> {
+    teamBattleOutcome(): Promise<RouteResult<typeof routes.getTeamBattleOutcome>> {
         return this.pokemon.teamBattleOutcome();
     }
 }

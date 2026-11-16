@@ -25,6 +25,8 @@ src/
   entities/                 the eight old tables, one-to-one with the Prisma schema (+ §4 transfer columns), and command_setting
   migrations/               empty until the owner generates the initial migration
   common/                   CORS, constant-time compare, zod pipe
+  http/                     the whole HTTP surface as zod route definitions (@singularity/http-contract),
+                            and brobotDocument(), its OpenAPI 3.1 document
   modules/
     auth/                   the three Twitch OAuth flows, JWT, guards, the Twitch token stores
     pokemon/                read-only HTTP for the admin site, and the game: generation, team rules, exclusivity, battles
@@ -46,6 +48,12 @@ cp .env.example .env          # fill in the Twitch app + secrets
 pnpm run db:schema:dev        # LOCAL dev database only: create/align tables from the entities
 RUN_MIGRATIONS=false pnpm run dev
 ```
+
+`nest build` and `nest start` compile against `@singularity/http-contract`'s
+built `dist/` (`tsconfig.build.json`), and the build refuses a missing or
+stale one with the recovery command. Build it, from the superproject root,
+with `pnpm exec turbo run build --filter=@singularity/brobot`. The typecheck,
+lint and tests read the library's source and need no build.
 
 `db:schema:dev` is for a throwaway local database only. Real schema changes
 go through migrations. **The owner generates them**
@@ -196,8 +204,19 @@ share one brobot session.
 ## HTTP surface (for the admin site, U1)
 
 Everything is under `/api`. JSON bodies use camelCase. Errors are Nest's
-standard `{ statusCode, message, error }`; zod validation failures (400) add
-`issues: [{ path, message }]`.
+standard `{ statusCode, message, error }` (`error` is absent when the
+exception carries no message: `{ statusCode: 401, message: 'Unauthorized' }`);
+zod validation failures (400) are `{ message: 'Validation failed', issues:
+[{ path, message }] }`.
+
+The tables below are a summary. The contract is `src/http/`: one
+`defineRoute` per operation (24), with every request and response as a zod
+schema whose component id starts with `Brobot`. Each controller validates
+with its route's slots (`new ZodValidationPipe(routes.getTeam.query)`) and
+returns `RouteResult<typeof routes.getTeam>`, so a handler that answers
+anything else does not compile. `brobotDocument()` builds the OpenAPI 3.1
+document, and `src/http/document.spec.ts` holds it equal to what Nest serves:
+the same operations at the same statuses. A route change is made there first.
 
 ### Health: public, no database, not rate-limited
 
