@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+#
+# Pre-commit gate: gitleaks over what this commit records.
+#
+# Runs `scripts/gitleaks/scan.sh staged`. With no gitleaks, or not the pinned
+# version, it says so once and lets the commit through: CI scans every push,
+# and a hook that blocks on a missing tool gets disabled. Findings block.
+#
+# A false positive: put a `gitleaks:allow` comment on that line, where review
+# sees it. Bypass the whole hook with `git commit --no-verify` when you mean it.
+#
+# Copied unchanged into every repository that runs gitleaks; keep it generic.
+
+set -uo pipefail
+
+YELLOW=$'\033[33m'
+RED=$'\033[31m'
+DIM=$'\033[2m'
+RESET=$'\033[0m'
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+scan="$repo_root/scripts/gitleaks/scan.sh"
+[ -f "$scan" ] || exit 0
+
+# `git commit -a` and `git commit <path>` stage into a temporary index and name
+# it in GIT_INDEX_FILE: that index is this commit, so it is kept (made absolute
+# first, since the cd below moves away from wherever it is relative to).
+if [ -n "${GIT_INDEX_FILE:-}" ]; then
+    case "$GIT_INDEX_FILE" in
+        /* | [A-Za-z]:[\\/]*) ;;
+        *) GIT_INDEX_FILE="$PWD/$GIT_INDEX_FILE" ;;
+    esac
+    export GIT_INDEX_FILE
+fi
+
+# git runs hooks with GIT_DIR and friends exported; from here on git finds the
+# repository from the working directory, the checkout's root.
+cd "$repo_root" || exit 0
+unset GIT_DIR GIT_WORK_TREE GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_PREFIX GIT_NAMESPACE GIT_QUARANTINE_PATH
+
+# A git GUI client can run hooks with a minimal PATH, missing where
+# install.sh puts gitleaks.
+for candidate in "$HOME/.local/bin" "$HOME/.local/share/pnpm" /usr/local/bin; do
+    [ -d "$candidate" ] || continue
+    case ":$PATH:" in
+        *":$candidate:"*) ;;
+        *) PATH="$candidate:$PATH" ;;
+    esac
+done
+export PATH
+
+# stderr is held back until the verdict: on exit 2 scan.sh's own message is
+# replaced by the one note below, and otherwise it is the report.
+errors=$(mktemp "${TMPDIR:-/tmp}/pre-commit-gitleaks.XXXXXX") || errors=/dev/null
+bash "$scan" staged 2>"$errors"
+status=$?
+[ "$status" -ne 2 ] && [ -f "$errors" ] && cat "$errors" >&2
+[ "$errors" != /dev/null ] && rm -f "$errors"
+
+case "$status" in
+    0) exit 0 ;;
+    2)
+        echo "${YELLOW}pre-commit: secret scan skipped, gitleaks is missing or not the pinned version: bash scripts/gitleaks/install.sh${RESET}" >&2
+        exit 0
+        ;;
+    1)
+        echo "" >&2
+        echo "${RED}pre-commit: gitleaks found a possible secret in the staged changes (above, redacted).${RESET}" >&2
+        echo "${DIM}  A real secret: unstage it, and rotate it if it was ever pushed." >&2
+        echo "  A false positive: add a gitleaks:allow comment on that line; review sees it." >&2
+        echo "  git commit --no-verify   # skip this hook when you mean it${RESET}" >&2
+        exit 1
+        ;;
+    *)
+        echo "${RED}pre-commit: the secret scan failed (scan.sh exited $status); commit refused.${RESET}" >&2
+        echo "${DIM}  git commit --no-verify   # skip this hook when you mean it${RESET}" >&2
+        exit 1
+        ;;
+esac

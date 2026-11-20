@@ -19,7 +19,9 @@
         "served-routes": "BROBOT_WRITE_SERVED_ROUTES=1 vitest run src/http/served-routes.spec.ts",
         "contract:lint": "REDOCLY=../../libs/contracts/node_modules/.bin/redocly node ../../libs/contracts/scripts/contract-lint.mjs --document openapi.json --lint-ignore-file contract-lint-ignore.txt",
         "config:pull-dev": "ts-node --transpile-only -P tsconfig.app.json scripts/config-pull-dev.ts",
-        "import:prisma-dump": "ts-node --transpile-only -P tsconfig.app.json scripts/import-prisma-dump.ts"
+        "import:prisma-dump": "ts-node --transpile-only -P tsconfig.app.json scripts/import-prisma-dump.ts",
+        "postinstall": "if [ -z \"$GITHUB_ACTIONS\" ]; then git config core.hooksPath .githooks || true; fi",
+        "secrets:scan": "bash scripts/gitleaks/scan.sh"
     },
     "dependencies": {
         "@2toad/profanity": "^3.3.0",

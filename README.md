@@ -36,7 +36,10 @@ src/
     transfer/               /api/internal/transfer/* for api-time, the active_game state machine,
                             transfer_log (entities/), and the Prisma-dump import's mappers (import/)
     health/                 /api/health, /api/health/live
-scripts/                    operator scripts (import-prisma-dump.ts) and the openapi / env:schema exports
+scripts/                    operator scripts (import-prisma-dump.ts) and the openapi / env:schema exports;
+                            gitleaks/ is singularity's secret-scan wrapper, copied unchanged
+.githooks/pre-commit        the gitleaks pre-commit hook, copied unchanged from singularity
+.gitleaks-baseline.json     redacted gitleaks findings already in history: `pnpm run secrets:scan baseline`
 openapi.json                the HTTP contract, generated: `pnpm run openapi`
 served-routes.json          what Nest serves, as served-routes/v1, generated: `pnpm run served-routes`
 contract-lint-ignore.txt    its lint exceptions under singularity's ruleset: `pnpm run contract:lint`
@@ -78,6 +81,29 @@ pnpm run test:integration   # real Postgres via testcontainers (needs Docker)
 pnpm run contract:lint      # openapi.json under singularity's contract ruleset (from the superproject)
 pnpm run served-routes      # rewrite served-routes.json after a route change (the parity spec checks it)
 ```
+
+### Secret scanning
+
+gitleaks runs with its default rules (there is no `.gitleaks.toml`). The
+files are singularity's, copied unchanged, and its
+`guidelines/workflow/secret-scanning.md` is the reference. Its
+`scripts/gitleaks/check-copies.mjs` checks the copies.
+
+```bash
+bash scripts/gitleaks/install.sh                  # the pinned version, checksum-verified, into ~/.local/bin
+pnpm run secrets:scan staged                      # what the pre-commit hook runs
+pnpm run secrets:scan range origin/main..HEAD     # this branch's commits
+pnpm run secrets:scan history                     # all of HEAD's history, minus .gitleaks-baseline.json
+```
+
+`pnpm install` sets `core.hooksPath .githooks` (except under GitHub Actions),
+so `.githooks/pre-commit` scans every commit. If gitleaks is missing, or is
+not the pinned version, the hook prints a note and lets the commit through.
+For a false positive, put a `gitleaks:allow` comment on the line. Do not
+add a `.gitleaksignore`: the scan refuses one. The baseline (2026-11-20,
+gitleaks 8.30.1, `origin/main` at `f787ec9`) holds 2 findings, neither of
+them a secret. One is a fixture UUID in `prisma-import.spec.ts`, and the
+other is the circleci badge token from the NestJS template README.
 
 ## Environment
 
