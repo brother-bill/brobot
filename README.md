@@ -23,7 +23,7 @@ src/
   mikro-orm.config.ts       one ORM config for the app and the CLI
   config/                   zod env schema (fails at boot, names every bad variable)
   entities/                 the eight old tables, one-to-one with the Prisma schema (+ §4 transfer columns), and command_setting
-  migrations/               empty until the owner generates the initial migration
+  migrations/               MikroORM migrations (Migration20260927223759 is the initial schema) and their snapshot
   common/                   CORS, constant-time compare, zod pipe
   http/                     the whole HTTP surface as zod route definitions (@singularity/http-contract),
                             and brobotDocument(), its OpenAPI 3.1 document (committed as openapi.json)
@@ -192,14 +192,16 @@ means the bot has not deployed the endpoint yet. Off with
 | Bot switches (optional) | |
 |---|---|
 | `TWITCH_BOT_ENABLED` | default `true`. `false` keeps chat, drops and reward handling offline; the API and sockets still serve. |
-| `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids, and to the stream going live and ending and the channel's title or category changing when `DISCORD_BOT_URL` is set. nginx must pass `/twitch/` to the API. |
+| `TWITCH_EVENTSUB_ENABLED` | default `false`. `true` (production, with `TWITCH_BOT_ENABLED`) mounts the EventSub webhook at `https://$DOMAIN/twitch/…` and subscribes to redemptions and raids, and to the stream going live and ending and the channel's title or category changing when `DISCORD_BOT_URL` is set. The path sits outside the `/api` prefix, so whatever routes `admin.brobot.live` to the pod (the Cloudflare tunnel and the chart's route, in singularity-infra) must pass `/twitch/` through as well as `/api/`. |
 | `OPENAI_MODEL` | default `gpt-4o-mini`; the model behind the `@bro_____bot` reply. |
 | `TWITCH_PREDICTION_TITLE` | default `Will Trama Win This Game?`, ≤ 45 chars: the streamer client's `create_prediction` hotkey. |
 | `TWITCH_PREDICTION_OUTCOMES` | default `Yes,No`: comma-separated, 2–10, each ≤ 25 chars. |
 | `TWITCH_PREDICTION_WINDOW_SECONDS` | default `90` (30–1800): seconds before Twitch locks the prediction. |
 
 The following are retired and no longer read: `SESSION_SECRET` and
-the `AWS_*` deploy variables.
+the `AWS_*` deploy variables (`AWS_USER`, `AWS_PUBLIC_IP`, `AWS_SSH_KEY`,
+`AWS_EC2_PATH`), which drove the old pm2 deploy to EC2. That host was
+terminated on 2026-10-21.
 
 ## Auth model
 
@@ -511,15 +513,21 @@ time.
 
 ## Importing the old database
 
-`scripts/import-prisma-dump.ts` loads the old Prisma database (the RDS
-`brobot-api-prod`) into the new schema through MikroORM. It covers
+`scripts/import-prisma-dump.ts` loads the old Prisma database
+(`brobot-api-prod`) into the new schema through MikroORM. That database's
+RDS instance was deleted on 2026-10-21 after final dumps to R2
+(singularity-infra `runbooks/aws-exit.md` §2, §4), so the source is now
+that final dump, or a scratch Postgres restored from it for `--from-db`.
+The cutover procedure it belongs to is singularity-infra
+`runbooks/archive/brobot-cutover.md`. It covers
 `TwitchUser` (with `roles[]` kept), `TwitchUserRegistered`,
 `TwitchBotAuth`, `TwitchStreamerAuth`, `PokemonTeam`, `Pokemon` (every
 Pokémon arrives with `active_game = 'brobot'`) and both battle-outcome
 tables. `Session` is not imported.
 
 ```bash
-# 1. a plain, data-only dump of the old database (the default COPY format; not --inserts, not -Fc)
+# 1. a plain, data-only dump of the old database (the default COPY format; not --inserts, not -Fc);
+#    $OLD_URL is a scratch restore of the final R2 dump, since the RDS instance is gone
 pg_dump --data-only --format=plain "$OLD_URL" > brobot-prisma.sql
 
 # 2. map every row; counts per table, every row that cannot be mapped. Connects to nothing.
