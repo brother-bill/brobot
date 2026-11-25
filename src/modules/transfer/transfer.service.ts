@@ -18,7 +18,7 @@ import type { DepartBody } from './transfer.schemas';
 
 /**
  * One brobot Pokémon as the internal transfer API returns it. Field names are
- * the contract (`BrobotPokemonSchema` in libs/pmd-contracts): renaming one
+ * the contract (`BrobotPokemonSchema` in libs/pmd-shared/pmd-contracts): renaming one
  * here breaks api-time.
  */
 export interface TransferPokemon {

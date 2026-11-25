@@ -24,7 +24,7 @@ import { toTransferPokemon } from './transfer.service';
 
 /**
  * brobot's `/api/internal/transfer/*` held to the wire api-time speaks:
- * `libs/pmd-contracts/src/transfer.ts`, which api-time's
+ * `libs/pmd-shared/pmd-contracts/src/transfer.ts`, which api-time's
  * `src/app-modules/brobot/brobot-client.service.ts` validates every body it
  * sends and every answer it reads with.
  *

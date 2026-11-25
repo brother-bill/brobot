@@ -6,7 +6,7 @@
  *
  * The request schemas here are the only copy; `transfer.schemas.ts`
  * re-exports them for the service. The authoritative contract is
- * `libs/pmd-contracts/src/transfer.ts` in the superproject (ticket A1): these
+ * `libs/pmd-shared/pmd-contracts/src/transfer.ts` in the superproject (ticket A1): these
  * accept everything it sends, plus the ticket-B3 spelling of the return body
  * (`pmdLevel` for `level`, no `pmdRegisterId`). The return body's `species`
  * and `moves` mirror `BrobotReturnRequestSchema`'s.
@@ -145,7 +145,7 @@ export type ReturnBody = z.infer<typeof returnBodySchema>;
 
 // ── response schemas ────────────────────────────────────────────────────────
 
-/** Field names are the contract (`BrobotPokemonSchema` in libs/pmd-contracts): renaming one breaks api-time. */
+/** Field names are the contract (`BrobotPokemonSchema` in libs/pmd-shared/pmd-contracts): renaming one breaks api-time. */
 export const BrobotTransferPokemon = z
     .strictObject({
         id: z.uuid(),

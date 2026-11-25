@@ -14,7 +14,7 @@ import { userSession } from './security';
 
 // ── schemas ─────────────────────────────────────────────────────────────────
 
-/** The same shape api-time's `AuthService.generateTokenPair` returns, so libs/ngx-auth works unchanged. */
+/** The same shape api-time's `AuthService.generateTokenPair` returns, so libs/kit/ngx-auth works unchanged. */
 export const BrobotTokenPair = z
     .strictObject({
         accessToken: z.string().meta({ description: 'Access JWT, 15 minutes' }),
@@ -313,7 +313,7 @@ export const refreshSession = defineRoute({
     description: paragraphs(
         refreshDescription,
         doc`
-        An alias of \`/auth/twitch/refresh\`, at the path libs/ngx-auth's
+        An alias of \`/auth/twitch/refresh\`, at the path libs/kit/ngx-auth's
         interceptor recognises, so a refresh that itself answers 401 is not
         retried through a refresh.
     `,
