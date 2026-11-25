@@ -220,7 +220,7 @@ share one brobot session.
 - Every flow uses a single-use `state` cookie (CSRF). The streamer and bot
   flows force Twitch's account picker (`force_verify`).
 - The session is a JWT pair, the same shape api-time issues, so
-  `libs/ngx-auth` works unchanged. The access token lasts 15 min and the
+  `libs/kit/ngx-auth` works unchanged. The access token lasts 15 min and the
   refresh token 7 days. Both are httpOnly, `Secure`, `SameSite=Strict`
   host-only cookies named `accessToken` and `refreshToken`. An
   `Authorization: Bearer` header is also accepted and is checked first.
@@ -388,7 +388,7 @@ This is how a Pokémon moves between brobot and pmd-online (migration plan
 §4). **api-time is the only caller.** It proves that the player owns the
 Twitch account, then calls brobot with that Twitch id. brobot checks that
 the row belongs to that Twitch id and flips `active_game`. The shapes are
-mirrored in the superproject at `libs/pmd-contracts/src/transfer.ts`
+mirrored in the superproject at `libs/pmd-shared/pmd-contracts/src/transfer.ts`
 (`BrobotPokemonSchema` and the request schemas, ticket A1). Change both
 together: `src/modules/transfer/transfer-wire.spec.ts` fails when they drift
 (a body pmd-contracts accepts that the route refuses or strips, a path

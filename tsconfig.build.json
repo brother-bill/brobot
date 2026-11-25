@@ -18,8 +18,8 @@
     "compilerOptions": {
         "rootDir": "./src",
         "paths": {
-            "@singularity/http-contract": ["libs/http-contract/dist/index.d.ts"],
-            "@singularity/pmd-contracts": ["libs/pmd-contracts/src/index.ts"]
+            "@singularity/http-contract": ["libs/kit/http-contract/dist/index.d.ts"],
+            "@singularity/pmd-contracts": ["libs/pmd-shared/pmd-contracts/src/index.ts"]
         }
     }
 }

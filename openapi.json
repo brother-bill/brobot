@@ -878,7 +878,7 @@
     "paths": {
         "/auth/refresh": {
             "post": {
-                "description": "Same contract as api-time's `POST /api/auth/refresh`. A refresh token in\nthe body (bearer mode) gets the new pair back in the body; one from the\n`refreshToken` cookie (web) gets new cookies and an empty `200`.\n\nAn alias of `/auth/twitch/refresh`, at the path libs/ngx-auth's\ninterceptor recognises, so a refresh that itself answers 401 is not\nretried through a refresh.\n",
+                "description": "Same contract as api-time's `POST /api/auth/refresh`. A refresh token in\nthe body (bearer mode) gets the new pair back in the body; one from the\n`refreshToken` cookie (web) gets new cookies and an empty `200`.\n\nAn alias of `/auth/twitch/refresh`, at the path libs/kit/ngx-auth's\ninterceptor recognises, so a refresh that itself answers 401 is not\nretried through a refresh.\n",
                 "operationId": "refreshSession",
                 "requestBody": {
                     "content": {

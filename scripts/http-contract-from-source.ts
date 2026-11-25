@@ -7,7 +7,7 @@
 import Module from 'node:module';
 import { resolve } from 'node:path';
 
-const SOURCE = resolve(__dirname, '../../../libs/http-contract/src/index.ts');
+const SOURCE = resolve(__dirname, '../../../libs/kit/http-contract/src/index.ts');
 
 interface Resolver {
     _resolveFilename(request: string, ...rest: unknown[]): string;

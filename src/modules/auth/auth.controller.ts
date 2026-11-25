@@ -213,7 +213,7 @@ export class AuthController {
 /**
  * `POST /api/auth/refresh` — an alias of `/api/auth/twitch/refresh`.
  *
- * libs/ngx-auth's interceptor retries any 401 through a refresh, and skips
+ * libs/kit/ngx-auth's interceptor retries any 401 through a refresh, and skips
  * that retry only for URLs containing `/auth/refresh`. `/auth/twitch/refresh`
  * does not match, so a refresh that itself 401s would be retried forever.
  * Serving the path the interceptor already recognises keeps it unchanged.

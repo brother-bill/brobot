@@ -17,11 +17,11 @@ export default defineConfig({
         alias: [
             {
                 find: /^@singularity\/http-contract$/,
-                replacement: fileURLToPath(new URL('../../libs/http-contract/src/index.ts', import.meta.url)),
+                replacement: fileURLToPath(new URL('../../libs/kit/http-contract/src/index.ts', import.meta.url)),
             },
             {
                 find: /^@singularity\/pmd-contracts$/,
-                replacement: fileURLToPath(new URL('../../libs/pmd-contracts/src/index.ts', import.meta.url)),
+                replacement: fileURLToPath(new URL('../../libs/pmd-shared/pmd-contracts/src/index.ts', import.meta.url)),
             },
         ],
     },

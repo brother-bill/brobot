@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { CookieOptions, Response } from 'express';
 import { EnvService } from '../../config/env.service';
 
-/** The same shape api-time's `AuthService.generateTokenPair` returns, so libs/ngx-auth works unchanged. */
+/** The same shape api-time's `AuthService.generateTokenPair` returns, so libs/kit/ngx-auth works unchanged. */
 export interface TokenPair {
     accessToken: string;
     refreshToken: string;
